@@ -39,6 +39,8 @@
 #include <inttypes.h>
 #include <assert.h>
 #include "gssw.h"
+#include "s_gwfa.h"
+#include "edlib.h"
 
 //#define DEBUG_TRACEBACK
 

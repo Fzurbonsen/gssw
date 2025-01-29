@@ -67,8 +67,8 @@ cleanlocal:
 	$(RM) -r bin/
 	$(RM) -r obj/
 	$(RM) -r include/
-	cd $(DEP_DIR) && cd s_gwfa && $(MAKE) clean
-	cd $(DEP_DIR) && cd edlib && $(MAKE) clean && rm -rf build && mkdir build
+	cd $(CWD)/src/s_gwfa && $(MAKE) clean
+	cd $(CWD)/src/edlib && $(MAKE) clean && rm -rf build && mkdir build
 
 clean:cleanlocal
 
