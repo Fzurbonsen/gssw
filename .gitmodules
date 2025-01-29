@@ -1,3 +1,9 @@
 [submodule "src/simde"]
 	path = src/simde
 	url = https://github.com/nemequ/simde-no-tests
+[submodule "src/edlib"]
+	path = src/edlib
+	url = https://github.com/Martinsos/edlib.git
+[submodule "src/s_gwfa"]
+	path = src/s_gwfa
+	url = https://github.com/Fzurbonsen/s_gwfa.git
