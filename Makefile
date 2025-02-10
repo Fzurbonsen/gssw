@@ -30,15 +30,15 @@ all:$(BIN_DIR)/$(EXE) $(BIN_DIR)/$(EXEADJ) $(BIN_DIR)/$(EXETEST) $(LIB_DIR)/libg
 $(BIN_DIR)/$(EXE):$(OBJ_DIR)/$(OBJ) $(SRC_DIR)/example.c $(LIB_DEPS)
 	# Make dest directory
 	@mkdir -p $(@D)
-	$(CC) $(INCLUDE_FLAGS) $(LD_LIB_DIR_FLAGS) $(LDFLAGS) $(CPPFLAGS) $(CFLAGS) $(SRC_DIR)/example.c -o $@ $< -ls_gwfa -ledlib -lm -lz
+	$(CC) $(INCLUDE_FLAGS) $(LD_LIB_DIR_FLAGS) $(LDFLAGS) $(CPPFLAGS) $(CFLAGS) $(SRC_DIR)/example.c -o $@ $< -ledlib -ls_gwfa -lm -lz -lstdc++
 
 $(BIN_DIR)/$(EXEADJ):$(OBJ_DIR)/$(OBJ) $(SRC_DIR)/example_adj.c $(LIB_DEPS)
 	@mkdir -p $(@D)
-	$(CC) $(INCLUDE_FLAGS) $(LD_LIB_DIR_FLAGS) $(LDFLAGS) $(CPPFLAGS) $(CFLAGS) $(SRC_DIR)/example_adj.c -o $@ $< -ls_gwfa -ledlib -lm -lz
+	$(CC) $(INCLUDE_FLAGS) $(LD_LIB_DIR_FLAGS) $(LDFLAGS) $(CPPFLAGS) $(CFLAGS) $(SRC_DIR)/example_adj.c -o $@ $< -ledlib -ls_gwfa -lm -lz -lstdc++
 
 $(BIN_DIR)/$(EXETEST):$(OBJ_DIR)/$(OBJ) $(SRC_DIR)/gssw_test.c $(LIB_DEPS)
 	@mkdir -p $(@D)
-	$(CC) $(INCLUDE_FLAGS) $(LD_LIB_DIR_FLAGS) $(LDFLAGS) $(CPPFLAGS) $(CFLAGS) $(SRC_DIR)/gssw_test.c -o $@ $< -ls_gwfa -ledlib -lm -lz
+	$(CC) $(INCLUDE_FLAGS) $(LD_LIB_DIR_FLAGS) $(LDFLAGS) $(CPPFLAGS) $(CFLAGS) $(SRC_DIR)/gssw_test.c -o $@ $< -ledlib -ls_gwfa -lm -lz -lstdc++
 
 $(OBJ_DIR)/$(OBJ):$(SRC_DIR)/gssw.h $(SRC_DIR)/gssw.c $(LIB_DEPS)
 	@mkdir -p $(@D)

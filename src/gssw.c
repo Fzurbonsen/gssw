@@ -3677,6 +3677,141 @@ void gssw_reverse_graph_cigar(gssw_graph_cigar* c) {
     free(reversed);
 }
 
+typedef struct {
+    gssw_node* node_gssw;
+    s_gwfa_node_t* node_s_gwfa;
+} gssw_node_pair;
+
+gssw_graph_mapping* s_gwfa_edlib_trace_back (gssw_graph* graph,
+                                            int32_t doing_pinning,
+                                            int32_t num_tracebacks,
+                                            int32_t find_internal_node_alts,
+                                            const char* read,
+                                            const char* qual,
+                                            int32_t readLen,
+                                            gssw_node** pinning_nodes,
+                                            int32_t num_pinning_nodes,
+                                            int8_t* nt_table,
+                                            int8_t* score_matrix,
+                                            uint8_t gap_open,
+                                            uint8_t gap_extension,
+                                            int8_t start_full_length_bonus,
+                                            int8_t end_full_length_bonus) {
+
+    // Transform gssw_graph into s_gwfa_graph
+    s_gwfa_graph_t* g = s_gwfa_graph_create();
+
+    gssw_node_pair* node_list = (gssw_node_pair*)calloc(graph->size, sizeof(gssw_node_pair));
+
+    // Add nodes
+    for (int i = 0; i < graph->size; ++i) {
+        gssw_node* node = graph->nodes[i];
+        s_gwfa_node_t* n = s_gwfa_node_create(node->id, node->len, node->seq);
+        s_gwfa_graph_add_node(g, n);
+
+        // Store mapping between gssw and s_gwfa nodes
+        gssw_node_pair np;
+        np.node_gssw = node;
+        np.node_s_gwfa = n;
+        node_list[i] = np;
+    }
+
+    // Add edges
+    for (int i = 0; i < graph->size; ++i) {
+        gssw_node_pair np = node_list[i];
+        gssw_node* node1 = np.node_gssw;
+        s_gwfa_node_t* s_node1 = np.node_s_gwfa;
+
+        for (int j = 0; j < node1->count_next; ++j) {
+            gssw_node* node2 = node1->next[j];
+
+            // Find corresponding s_gwfa_node in the mapping
+            s_gwfa_node_t* s_node2 = NULL;
+            for (int k = 0; k < graph->size; ++k) {
+                if (node_list[k].node_gssw == node2) {
+                    s_node2 = node_list[k].node_s_gwfa;
+                    break;
+                }
+            }
+
+            if (s_node2) {
+                // Create and add edge
+                s_gwfa_edge_t* e = s_gwfa_edge_create(s_node1, s_node2, 0);
+            }
+        }
+    }
+
+    s_gwfa_path_t** final_path = (s_gwfa_path_t**)malloc(sizeof(s_gwfa_path_t*));
+    char* ref = NULL;
+
+    int32_t score = g_wfa_ed_infix(read, readLen, g, &final_path);
+
+    gssw_graph_mapping* gm = gssw_graph_mapping_create();
+
+    gm->position = 0;
+    gm->score = score;
+
+    gssw_graph_cigar graph_cigar;
+    graph_cigar.length = (*final_path)->size;
+    gssw_node_cigar* ncs = (gssw_node_cigar*)malloc((*final_path)->size * sizeof(gssw_node_cigar));
+
+    // Iterate over the path to fill gm
+    for (int i = 0; i < (*final_path)->size; ++i) {
+        gssw_node_cigar nc;
+        nc.node = node_list[(*final_path)->nodes[i]->idx].node_gssw;
+        EdlibAlignResult result = edlibAlign(read, strlen(read), 
+                                                nc.node->seq, nc.node->len, 
+                                                edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+        char* edlib_cigar = edlibAlignmentToCigar(result.alignment, result.alignmentLength, EDLIB_CIGAR_STANDARD);
+
+        // Count the number of operations
+        int count = 0;
+        for (int j = 0; edlib_cigar[j] != '\0'; j++) {
+            if (!isdigit(edlib_cigar[j])) count++;
+        }
+
+        // Allocate gssw_cigar struct
+        gssw_cigar* cigar = (gssw_cigar*)malloc(sizeof(gssw_cigar));
+        cigar->length = count;
+        cigar->elements = (gssw_cigar_element*)malloc(count * sizeof(gssw_cigar_element));
+
+        // Parse edlib_cigar
+        int idx = 0, num = 0;
+        for (int j = 0; edlib_cigar[j] != '\0'; j++) {
+            if (isdigit(edlib_cigar[i])) {
+                num = num * 10 + (edlib_cigar[j] - '0'); // Accumulate digits
+            } else {
+                gssw_cigar_push_back(cigar, edlib_cigar[j], num);
+                idx++;
+                num = 0; // Reset for next number
+            }
+        }
+
+        // Add CIGAR to NC
+        nc.cigar = cigar;
+
+        ncs[i] = nc;
+    }
+
+    graph_cigar.elements = ncs;
+    gm->cigar = graph_cigar;
+
+
+    // Free allocated memory
+    free(ref);
+    free(final_path);
+    free(node_list);
+    return gm;
+}
+
+
+
+
+
+
+
+
+
 // TODO: the suboptimal alignments this produces are all anchored to the end point of the optimal alignment
 // this is valid for the pinned alignment, but if we want to expand this to produce alternate alignments
 // for local alignment then we need to seed the multi-alignment stack with the top k end points before entering
@@ -3696,6 +3831,22 @@ gssw_graph_mapping** gssw_graph_trace_back_internal (gssw_graph* graph,
                                                      uint8_t gap_extension,
                                                      int8_t start_full_length_bonus,
                                                      int8_t end_full_length_bonus) {
+
+    s_gwfa_edlib_trace_back(graph,
+                            doing_pinning,
+                            num_tracebacks,
+                            find_internal_node_alts,
+                            read,
+                            qual,
+                            readLen,
+                            pinning_nodes,
+                            num_pinning_nodes,
+                            nt_table,
+                            score_matrix,
+                            gap_open,
+                            gap_extension,
+                            start_full_length_bonus,
+                            end_full_length_bonus);
 
 #ifdef DEBUG_TRACEBACK
     fprintf(stderr, "beginning traceback with params:\n");
