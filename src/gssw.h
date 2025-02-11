@@ -783,6 +783,22 @@ void gssw_sse2_enable();
 
 /* Turn off the SSE2 matrix filler and use a pure software implementation */
 void gssw_sse2_disable();
+
+gssw_graph_mapping* s_gwfa_edlib_trace_back (gssw_graph* graph,
+    int32_t doing_pinning,
+    int32_t num_tracebacks,
+    int32_t find_internal_node_alts,
+    const char* read,
+    const char* qual,
+    int32_t readLen,
+    gssw_node** pinning_nodes,
+    int32_t num_pinning_nodes,
+    int8_t* nt_table,
+    int8_t* score_matrix,
+    uint8_t gap_open,
+    uint8_t gap_extension,
+    int8_t start_full_length_bonus,
+    int8_t end_full_length_bonus);
     
 #ifdef __cplusplus
 }
