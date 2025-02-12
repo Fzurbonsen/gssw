@@ -3744,7 +3744,7 @@ gssw_graph_mapping* s_gwfa_edlib_trace_back (gssw_graph* graph,
     s_gwfa_path_t** final_path = (s_gwfa_path_t**)malloc(sizeof(s_gwfa_path_t*));
     char* ref = NULL;
 
-    int32_t score = g_wfa_ed_infix(read, readLen, g, &final_path);
+    int32_t score = g_wfa_ed_infix(read, readLen, g, final_path);
 
     gssw_graph_mapping* gm = gssw_graph_mapping_create();
 
@@ -3752,6 +3752,9 @@ gssw_graph_mapping* s_gwfa_edlib_trace_back (gssw_graph* graph,
     gm->score = score;
 
     gssw_graph_cigar graph_cigar;
+    fprintf(stderr, "%i\n", final_path);
+    fprintf(stderr, "%i\n", *final_path);
+    fprintf(stderr, "%i\n", (*final_path)->size);
     graph_cigar.length = (*final_path)->size;
     gssw_node_cigar* ncs = (gssw_node_cigar*)malloc((*final_path)->size * sizeof(gssw_node_cigar));
 

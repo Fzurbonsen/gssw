@@ -76,6 +76,21 @@ int main (int argc, char * const argv[]) {
                                                     gap_open,
                                                     gap_extension,
                                                     0, 0);
+    s_gwfa_edlib_trace_back (graph,
+                                0,
+                                0,
+                                0,
+                                read_seq,
+                                "",
+                                strlen(read_seq),
+                                NULL,
+                                0,
+                                NULL,
+                                NULL,
+                                0,
+                                0,
+                                0,
+                                0);
 
     printf("Optimal local mapping:\n");
     gssw_print_graph_mapping(gm, stdout);
