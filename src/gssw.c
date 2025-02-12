@@ -3832,22 +3832,6 @@ gssw_graph_mapping** gssw_graph_trace_back_internal (gssw_graph* graph,
                                                      int8_t start_full_length_bonus,
                                                      int8_t end_full_length_bonus) {
 
-    s_gwfa_edlib_trace_back(graph,
-                            doing_pinning,
-                            num_tracebacks,
-                            find_internal_node_alts,
-                            read,
-                            qual,
-                            readLen,
-                            pinning_nodes,
-                            num_pinning_nodes,
-                            nt_table,
-                            score_matrix,
-                            gap_open,
-                            gap_extension,
-                            start_full_length_bonus,
-                            end_full_length_bonus);
-
 #ifdef DEBUG_TRACEBACK
     fprintf(stderr, "beginning traceback with params:\n");
     fprintf(stderr, "\tpinning? %d\n", doing_pinning);
