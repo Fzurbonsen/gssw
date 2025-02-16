@@ -3682,6 +3682,131 @@ typedef struct {
     s_gwfa_node_t* node_s_gwfa;
 } gssw_node_pair;
 
+
+char* gssw_get_complete_reference(s_gwfa_path_t* path) {
+
+    // Calculate length of the string
+    int32_t len = 0;
+    for (int i = 0; i < path->size; ++i) {
+        s_gwfa_node_t* node = path->nodes[i];
+        len += node->size;
+    }
+
+    // Allocate memory for the string
+    char* ref = (char*)malloc((len + 1) * sizeof(char));
+
+    // Iterate over all nodes to fill string
+    int32_t idx = 0;
+    for (int i = 0; i < path->size; ++i) {
+        s_gwfa_node_t* node = path->nodes[i];
+        // Iterate over individual strings
+        for (int j = 0; j < node->size; ++j, ++idx) {
+            ref[idx] = node->seq[j];
+        }
+    }
+    ref[idx+1] = '\0';
+    if (idx+1 != len + 1) {
+        fprintf(stderr, "error: idx and len do not match!\n");
+        fprintf(stderr, "idx: %i\tlen: %i\n", idx, len);
+        exit(1);
+    }
+
+    return ref;
+}
+
+char* gssw_flatten_cigar(const char* cigar) {
+    char* f_cigar;
+    int32_t len = 0;
+
+    // Calculate size of flattened CIGAR
+    int32_t num = 0;
+    for (int i = 0; i < strlen(cigar); ++i) {
+        if (isdigit(cigar[i])) {
+            num = num * 10 + (cigar[i] - '0');  // Accumulate digits
+        } else if (cigar[i] == 'M' || cigar[i] == 'I' || cigar[i] == 'D') {
+            len += num;
+            num = 0;  // Reset for next number
+        } else {
+            fprintf(stderr, "error: unexpected character in CIGAR!\n");
+            fprintf(stderr, "element: %c\tstring: %s\tindex: %i\n", cigar[i], cigar, i);
+            exit(1);
+        }
+    }
+    f_cigar = (char*)malloc((len + 1) * sizeof(char));
+
+    // Iterate over CIGAR to create flattened CIGAR
+    int32_t idx = 0;
+    for (int i = 0; i < strlen(cigar); ++i) {
+        if (isdigit(cigar[i])) {
+            num = num * 10 + (cigar[i] - '0');  // Accumulate digits
+        } else if (cigar[i] == 'M' || cigar[i] == 'I' || cigar[i] == 'D') {
+            char e = cigar[i];
+            for (int j = 0; j < num; ++j, ++idx) {
+                f_cigar[idx] = e;
+            }
+            num = 0;  // Reset for next number
+        } else {
+            fprintf(stderr, "error: unexpected character in CIGAR!\n");
+            fprintf(stderr, "element: %c\tstring: %s\tindex: %i\n", cigar[i], cigar, i);
+            exit(1);
+        }
+    }
+    f_cigar[idx + 1] = '\0';
+    return f_cigar;
+}
+
+gssw_graph_cigar gssw_get_graph_cigar_from_edlib(const char* edlib_cigar, int32_t offset, gssw_node_pair* node_list, s_gwfa_path_t* path) {
+    // Idx to keep track of the position in the reference
+    int32_t ref_pos = 0;
+    int32_t cigar_idx = 0;
+
+    // The position of the ref in the first node is the offset
+    ref_pos = offset;
+
+    // Get flattened CIGAR
+    char* f_cigar = gssw_flatten_cigar(edlib_cigar);
+
+    // Create graph cigar struct
+    gssw_graph_cigar graph_cigar;
+    graph_cigar.length = path->size;
+    graph_cigar.elements = (gssw_node_cigar*)malloc(path->size * sizeof(gssw_node_cigar));
+
+    // Iterate over all nodes in the path and assign the corresponding cigar
+    for (int i = 0; i < path->size; ++i) {
+        gssw_node* node = node_list[path->nodes[i]->idx].node_gssw;
+        gssw_node_cigar nc;
+        nc.node = node;
+
+        // Create CIGAR
+        gssw_cigar* cigar = (gssw_cigar*)calloc(1, sizeof(gssw_cigar));
+        int32_t node_size = node->len - ref_pos;
+        while (node_size) {
+            if (cigar_idx >= strlen(f_cigar)
+                || !(f_cigar[cigar_idx] == 'M' || f_cigar[cigar_idx] == 'I' || f_cigar[cigar_idx] == 'D')) {
+                break;
+            }
+            if (!(f_cigar[cigar_idx] == 'M' || f_cigar[cigar_idx] == 'I' || f_cigar[cigar_idx] == 'D')) {
+                fprintf(stderr, "error: unknown type!\n");
+                fprintf(stderr, "type: %c\n", f_cigar[cigar_idx]);
+                exit(1);
+            }
+            gssw_cigar_push_back(cigar, f_cigar[cigar_idx], 1);
+            if (f_cigar[cigar_idx] == 'M') {
+                node_size--;
+            } else if (f_cigar[cigar_idx] == 'D') {
+                node_size--;
+            }
+            cigar_idx++;
+        }
+
+        nc.cigar = cigar;
+        ref_pos = 0;
+        graph_cigar.elements[i] = nc;
+    }
+
+    return graph_cigar;
+}
+
 gssw_graph_mapping* s_gwfa_edlib_trace_back (gssw_graph* graph,
                                             int32_t doing_pinning,
                                             int32_t num_tracebacks,
@@ -3742,68 +3867,96 @@ gssw_graph_mapping* s_gwfa_edlib_trace_back (gssw_graph* graph,
     }
 
     s_gwfa_path_t** final_path = (s_gwfa_path_t**)malloc(sizeof(s_gwfa_path_t*));
-    char* ref = NULL;
 
     int32_t score = g_wfa_ed_infix(read, readLen, g, final_path);
+
+    fprintf(stderr, "score: %i\n", score);
 
     gssw_graph_mapping* gm = gssw_graph_mapping_create();
 
     gm->position = 0;
-    gm->score = score;
+    // gm->score = score;
 
     gssw_graph_cigar graph_cigar;
-    fprintf(stderr, "%i\n", final_path);
-    fprintf(stderr, "%i\n", *final_path);
-    fprintf(stderr, "%i\n", (*final_path)->size);
+    // fprintf(stderr, "final_path: %i\n", final_path);
+    // fprintf(stderr, "*final_path: %i\n", *final_path);
+    fprintf(stderr, "(*final_path)->size: %i\n", (*final_path)->size);
     graph_cigar.length = (*final_path)->size;
     gssw_node_cigar* ncs = (gssw_node_cigar*)malloc((*final_path)->size * sizeof(gssw_node_cigar));
 
-    // Iterate over the path to fill gm
-    for (int i = 0; i < (*final_path)->size; ++i) {
-        gssw_node_cigar nc;
-        nc.node = node_list[(*final_path)->nodes[i]->idx].node_gssw;
-        EdlibAlignResult result = edlibAlign(read, strlen(read), 
-                                                nc.node->seq, nc.node->len, 
-                                                edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
-        char* edlib_cigar = edlibAlignmentToCigar(result.alignment, result.alignmentLength, EDLIB_CIGAR_STANDARD);
+    char* ref = gssw_get_complete_reference(*final_path);
 
-        // Count the number of operations
-        int count = 0;
-        for (int j = 0; edlib_cigar[j] != '\0'; j++) {
-            if (!isdigit(edlib_cigar[j])) count++;
-        }
+    EdlibAlignResult result = edlibAlign(read, strlen(read), ref, strlen(ref), 
+                                            edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+    char* edlib_cigar = edlibAlignmentToCigar(result.alignment, result.alignmentLength, EDLIB_CIGAR_STANDARD);
+    
+    gm->position = result.startLocations[0];
+    gm->score = result.editDistance;
+    fprintf(stderr, "position: %i\tscore: %i\n", gm->position, gm->score);
+    gm->cigar = gssw_get_graph_cigar_from_edlib(edlib_cigar, result.startLocations[0], node_list, (*final_path));
 
-        // Allocate gssw_cigar struct
-        gssw_cigar* cigar = (gssw_cigar*)malloc(sizeof(gssw_cigar));
-        cigar->length = count;
-        cigar->elements = (gssw_cigar_element*)malloc(count * sizeof(gssw_cigar_element));
+    // // Iterate over the path to fill gm
+    // for (int i = 0; i < (*final_path)->size; ++i) {
+    //     gssw_node_cigar nc;
+    //     nc.node = node_list[(*final_path)->nodes[i]->idx].node_gssw;
+    
+    //     EdlibAlignResult result = edlibAlign(read, strlen(read), 
+    //                                          nc.node->seq, nc.node->len, 
+    //                                          edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
+    //     char* edlib_cigar = edlibAlignmentToCigar(result.alignment, result.alignmentLength, EDLIB_CIGAR_STANDARD);
+    
+    //     score += result.editDistance;
 
-        // Parse edlib_cigar
-        int idx = 0, num = 0;
-        for (int j = 0; edlib_cigar[j] != '\0'; j++) {
-            if (isdigit(edlib_cigar[i])) {
-                num = num * 10 + (edlib_cigar[j] - '0'); // Accumulate digits
-            } else {
-                gssw_cigar_push_back(cigar, edlib_cigar[j], num);
-                idx++;
-                num = 0; // Reset for next number
-            }
-        }
+    //     if (!edlib_cigar) {
+    //         fprintf(stderr, "Error: edlibAlignmentToCigar failed.\n");
+    //         edlibFreeAlignResult(result);
+    //         exit(1);
+    //     }
+    
+    //     // fprintf(stderr, "edlib_cigar: %s\n", edlib_cigar);
+    
+    //     // Allocate and initialize gssw_cigar
+    //     gssw_cigar* cigar = (gssw_cigar*)calloc(1, sizeof(gssw_cigar));
+    //     if (!cigar) {
+    //         fprintf(stderr, "Error: Failed to allocate gssw_cigar\n");
+    //         free(edlib_cigar);
+    //         edlibFreeAlignResult(result);
+    //         exit(1);
+    //     }
+    
+    //     int num = 0;
+    //     for (int j = 0; j < strlen(edlib_cigar); j++) {
+    //         if (isdigit(edlib_cigar[j])) {
+    //             num = num * 10 + (edlib_cigar[j] - '0');  // Accumulate digits
+    //         } else if (edlib_cigar[j] == 'M' || edlib_cigar[j] == 'I' || edlib_cigar[j] == 'D') {
+    //             gssw_cigar_push_back(cigar, edlib_cigar[j], num);
+    //             num = 0;  // Reset for next number
+    //         } else {
+    //             fprintf(stderr, "error: unexpected character in edlib_cigar!\n");
+    //             fprintf(stderr, "element: %c\tstring: %s\tindex: %i\n", edlib_cigar[j], edlib_cigar, j);
+    //             free(edlib_cigar);
+    //             edlibFreeAlignResult(result);
+    //             gssw_cigar_destroy(cigar);
+    //             exit(1);
+    //         }
+    //     }
+    
+    //     // Add CIGAR to NC
+    //     nc.cigar = cigar;
+    //     ncs[i] = nc;
+    
+    //     free(edlib_cigar);
+    //     edlibFreeAlignResult(result);
+    // }
 
-        // Add CIGAR to NC
-        nc.cigar = cigar;
-
-        ncs[i] = nc;
-    }
-
-    graph_cigar.elements = ncs;
-    gm->cigar = graph_cigar;
-
-
+    
     // Free allocated memory
     free(ref);
+    free(edlib_cigar);
+    edlibFreeAlignResult(result);
     free(final_path);
     free(node_list);
+    s_gwfa_graph_destroy(g);
     return gm;
 }
 
