@@ -3755,10 +3755,12 @@ char* gssw_flatten_cigar(const char* cigar) {
     return f_cigar;
 }
 
-gssw_graph_cigar gssw_get_graph_cigar_from_edlib(const char* edlib_cigar, int32_t offset, gssw_node_pair* node_list, s_gwfa_path_t* path) {
+gssw_graph_cigar gssw_get_graph_cigar_from_edlib(const char* edlib_cigar, int32_t offset, gssw_node_pair* node_list, s_gwfa_path_t* path,
+                                                 int32_t* score_pointer, int32_t match, int32_t mismatch, int32_t deletion, int32_t insertion) {
     // Idx to keep track of the position in the reference
     int32_t ref_pos = 0;
     int32_t cigar_idx = 0;
+
 
     // The position of the ref in the first node is the offset
     ref_pos = offset;
@@ -3770,6 +3772,7 @@ gssw_graph_cigar gssw_get_graph_cigar_from_edlib(const char* edlib_cigar, int32_
     gssw_graph_cigar graph_cigar;
     graph_cigar.length = path->size;
     graph_cigar.elements = (gssw_node_cigar*)malloc(path->size * sizeof(gssw_node_cigar));
+    int32_t score = 0;
 
     // Iterate over all nodes in the path and assign the corresponding cigar
     for (int i = 0; i < path->size; ++i) {
@@ -3792,9 +3795,13 @@ gssw_graph_cigar gssw_get_graph_cigar_from_edlib(const char* edlib_cigar, int32_
             }
             gssw_cigar_push_back(cigar, f_cigar[cigar_idx], 1);
             if (f_cigar[cigar_idx] == 'M') {
-                node_size--;
+                node_size += match;
+                score++;
             } else if (f_cigar[cigar_idx] == 'D') {
                 node_size--;
+                score += deletion;
+            } else if (f_cigar[cigar_idx] == 'I') {
+                score += insertion;
             }
             cigar_idx++;
         }
@@ -3804,6 +3811,7 @@ gssw_graph_cigar gssw_get_graph_cigar_from_edlib(const char* edlib_cigar, int32_
         graph_cigar.elements[i] = nc;
     }
 
+    *score_pointer = score;
     return graph_cigar;
 }
 
@@ -3882,15 +3890,19 @@ gssw_graph_mapping* s_gwfa_edlib_trace_back (gssw_graph* graph,
                                             edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
     char* edlib_cigar = edlibAlignmentToCigar(result.alignment, result.alignmentLength, EDLIB_CIGAR_STANDARD);
     
-    gm->position = result.startLocations[0];
-    gm->score = -result.editDistance;
-    gm->cigar = gssw_get_graph_cigar_from_edlib(edlib_cigar, result.startLocations[0], node_list, (*final_path));
+    int32_t* score_pointer = (int32_t*)calloc(1, sizeof(int32_t));
 
+    gm->position = result.startLocations[0];
+    gm->score = result.editDistance;
+    gm->cigar = gssw_get_graph_cigar_from_edlib(edlib_cigar, result.startLocations[0], node_list, (*final_path),
+                                                score_pointer, score_matrix[0], score_matrix[1], gap_open, gap_open);
+    gm->score = *score_pointer;
 
     
     // Free allocated memory
     free(ref);
     free(edlib_cigar);
+    free(score_pointer);
     edlibFreeAlignResult(result);
     free(final_path);
     free(node_list);
