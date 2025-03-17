@@ -3705,7 +3705,7 @@ char* gssw_get_complete_reference(s_gwfa_path_t* path) {
             ref[idx] = node->seq[j];
         }
     }
-    ref[idx+1] = '\0';
+    ref[idx] = '\0';
     if (idx+1 != len + 1) {
         fprintf(stderr, "error: idx and len do not match!\n");
         fprintf(stderr, "idx: %i\tlen: %i\n", idx, len);
@@ -3752,7 +3752,7 @@ char* gssw_flatten_cigar(const char* cigar) {
             exit(1);
         }
     }
-    f_cigar[idx + 1] = '\0';
+    f_cigar[idx] = '\0';
     return f_cigar;
 }
 
@@ -3916,10 +3916,10 @@ gssw_graph_mapping* s_gwfa_edlib_trace_back (gssw_graph* graph,
     free(edlib_cigar);
     free(score_pointer);
     edlibFreeAlignResult(result);
+    s_gwfa_path_destroy(*final_path);
     free(final_path);
     free(node_list);
     s_gwfa_graph_destroy(g);
-    fprintf(stderr, "\n");
     return gm;
 }
 
@@ -4065,6 +4065,7 @@ gssw_graph_mapping* s_gwfa_csswl_trace_back (gssw_graph* graph,
     free(ref);
     free(cigar);
     free(score_pointer);
+    s_gwfa_path_destroy(*final_path);
     free(final_path);
     free(node_list);
     s_gwfa_graph_destroy(g);
