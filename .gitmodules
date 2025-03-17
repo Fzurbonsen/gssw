@@ -7,3 +7,6 @@
 [submodule "src/s_gwfa"]
 	path = src/s_gwfa
 	url = https://github.com/Fzurbonsen/s_gwfa.git
+[submodule "src/Complete-Striped-Smith-Waterman-Library"]
+	path = src/Complete-Striped-Smith-Waterman-Library
+	url = https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library.git

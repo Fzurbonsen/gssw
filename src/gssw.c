@@ -41,6 +41,7 @@
 #include "gssw.h"
 #include "s_gwfa.h"
 #include "edlib.h"
+#include "ssw.h"
 
 //#define DEBUG_TRACEBACK
 
@@ -3919,6 +3920,158 @@ gssw_graph_mapping* s_gwfa_edlib_trace_back (gssw_graph* graph,
     free(node_list);
     s_gwfa_graph_destroy(g);
     fprintf(stderr, "\n");
+    return gm;
+}
+
+
+char* construct_csswl_cigar_string(const s_align* result) {
+    if (!result || result->cigarLen == 0) return NULL;
+
+    // First, estimate the required buffer size
+    size_t buffer_size = 0;
+    for (int i = 0; i < result->cigarLen; ++i) {
+        int len = cigar_int_to_len(result->cigar[i]);
+        char op = cigar_int_to_op(result->cigar[i]);
+        buffer_size += snprintf(NULL, 0, "%d%c", len, op);
+    }
+    buffer_size += 1; // For null-terminator
+
+    // Allocate memory
+    char* cigar_string = (char*)malloc(buffer_size);
+    if (!cigar_string) return NULL;
+
+    // Construct the CIGAR string
+    char* ptr = cigar_string;
+    for (int i = 0; i < result->cigarLen; ++i) {
+        int len = cigar_int_to_len(result->cigar[i]);
+        char op = cigar_int_to_op(result->cigar[i]);
+        ptr += sprintf(ptr, "%d%c", len, op);
+    }
+
+    return cigar_string;
+}
+
+
+gssw_graph_mapping* s_gwfa_csswl_trace_back (gssw_graph* graph,
+                                                int32_t doing_pinning,
+                                                int32_t num_tracebacks,
+                                                int32_t find_internal_node_alts,
+                                                const char* read,
+                                                const char* qual,
+                                                int32_t readLen,
+                                                gssw_node** pinning_nodes,
+                                                int32_t num_pinning_nodes,
+                                                int8_t* nt_table,
+                                                int8_t* score_matrix,
+                                                uint8_t gap_open,
+                                                uint8_t gap_extension,
+                                                int8_t start_full_length_bonus,
+                                                int8_t end_full_length_bonus) {
+
+    // Transform gssw_graph into s_gwfa_graph
+    s_gwfa_graph_t* g = s_gwfa_graph_create();
+
+    gssw_node_pair* node_list = (gssw_node_pair*)calloc(graph->size, sizeof(gssw_node_pair));
+
+    // Add nodes
+    for (int i = 0; i < graph->size; ++i) {
+        gssw_node* node = graph->nodes[i];
+        s_gwfa_node_t* n = s_gwfa_node_create(node->id, node->len, node->seq);
+        s_gwfa_graph_add_node(g, n);
+
+        // Store mapping between gssw and s_gwfa nodes
+        gssw_node_pair np;
+        np.node_gssw = node;
+        np.node_s_gwfa = n;
+        node_list[i] = np;
+    }
+
+    // Add edges
+    for (int i = 0; i < graph->size; ++i) {
+        gssw_node_pair np = node_list[i];
+        gssw_node* node1 = np.node_gssw;
+        s_gwfa_node_t* s_node1 = np.node_s_gwfa;
+
+        for (int j = 0; j < node1->count_next; ++j) {
+        gssw_node* node2 = node1->next[j];
+
+        // Find corresponding s_gwfa_node in the mapping
+        s_gwfa_node_t* s_node2 = NULL;
+        for (int k = 0; k < graph->size; ++k) {
+            if (node_list[k].node_gssw == node2) {
+                s_node2 = node_list[k].node_s_gwfa;
+                break;
+            }
+        }
+
+        if (s_node2) {
+            // Create and add edge
+            s_gwfa_edge_t* e = s_gwfa_edge_create(s_node1, s_node2, 0);
+            }
+        }
+    }
+
+    s_gwfa_path_t** final_path = (s_gwfa_path_t**)malloc(sizeof(s_gwfa_path_t*));
+
+    int32_t score = g_wfa_ed_infix(read, readLen, g, final_path);
+
+    gssw_graph_mapping* gm = gssw_graph_mapping_create();
+
+    gssw_graph_cigar graph_cigar;
+    graph_cigar.length = (*final_path)->size;
+    gssw_node_cigar* ncs = (gssw_node_cigar*)malloc((*final_path)->size * sizeof(gssw_node_cigar));
+
+    char read2[readLen];
+    strncpy(read2, read, readLen);
+
+    char* ref = gssw_get_complete_reference(*final_path);
+
+    // Allocate memory for numeric sequences
+    int8_t* num = (int8_t*)malloc(readLen * sizeof(int8_t));   // the read sequence represented in numbers
+    int8_t* ref_num = (int8_t*)malloc(strlen(ref) * sizeof(int8_t)); // the reference sequence represented in numbers
+    s_profile* profile;
+    s_align* result;
+
+    /* This table is used to transform nucleotide letters into numbers. */
+    static const int8_t new_nt_table[128] = {
+        4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 0, 4, 1,  4, 4, 4, 2,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  3, 0, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 0, 4, 1,  4, 4, 4, 2,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  3, 0, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4
+    };
+
+    for (int m = 0; m < readLen; ++m) num[m] = new_nt_table[(int)read2[m]];
+    profile = ssw_init(num, readLen, score_matrix, 5, 2);
+    for (int m = 0; m < strlen(ref); ++m) ref_num[m] = new_nt_table[(int)ref[m]];
+    result = ssw_align(profile, ref_num, strlen(ref), gap_open, gap_extension, 1, 0, 0, 15);
+
+    char* cigar = construct_csswl_cigar_string(result);
+
+    int32_t* score_pointer = (int32_t*)calloc(1, sizeof(int32_t));
+
+    gm->position = result->ref_begin1;
+
+    gm->score = result->score1;
+
+    gm->cigar = gssw_get_graph_cigar_from_edlib(cigar, result->ref_begin1, node_list, (*final_path),
+            score_pointer, 1, -1, -gap_open, -gap_open);
+
+
+    // Free allocated memory
+    free(ref);
+    free(cigar);
+    free(score_pointer);
+    free(final_path);
+    free(node_list);
+    s_gwfa_graph_destroy(g);
+    align_destroy(result);
+    init_destroy(profile);
+    free(num);
+    free(ref_num);
     return gm;
 }
 
