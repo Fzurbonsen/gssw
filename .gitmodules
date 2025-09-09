@@ -1,3 +1,12 @@
 [submodule "src/simde"]
 	path = src/simde
 	url = https://github.com/nemequ/simde-no-tests
+[submodule "src/gwfa"]
+	path = src/gwfa
+	url = https://github.com/Fzurbonsen/gwfa.git
+[submodule "src/edlib"]
+	path = src/edlib
+	url = git@github.com:Martinsos/edlib.git
+[submodule "src/csswl"]
+	path = src/csswl
+	url = git@github.com:mengyao/Complete-Striped-Smith-Waterman-Library.git
