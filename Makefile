@@ -46,7 +46,7 @@ $(BIN_DIR)/$(EXETEST):$(OBJ_DIR)/$(OBJ) $(SRC_DIR)/gssw_test.c
 
 $(OBJ_DIR)/$(OBJ):$(INC_DIR) $(LIB) $(SRC_DIR)/gssw.c $(SRC_DIR)/vg_gwfa_pipeline.cpp
 	@mkdir -p $(@D)
-	$(CC) $(LDFLAGS) $(CPPFLAGS) $(CFLAGS) -c -o $@ $(SRC_DIR)/gssw.c
+	$(CC) $(LDFLAGS) $(CPPFLAGS) $(CFLAGS) -c -o $@ $(SRC_DIR)/gssw.c $(INCFLAGS)
 
 $(LIB_DIR)/libedlib.a:
 	@mkdir -p $(LIB_DIR)/
