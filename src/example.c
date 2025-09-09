@@ -10,11 +10,11 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "gssw.h"
+#include "vg_gwfa_pipeline_wrapper.h"
 
 
 //	Align a pair of genome sequences.
 int main (int argc, char * const argv[]) {
-    
     if (argc != 6) {
         fprintf(stderr, "usage: gssw_example nodeseq1 nodeseq2 nodeseq3 nodeseq4 readseq\n");
         exit(1);

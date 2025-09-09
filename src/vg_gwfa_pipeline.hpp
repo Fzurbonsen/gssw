@@ -32,14 +32,6 @@ using namespace std;
 #ifndef PROJECTA_VG_GWFA_PIPELINE_HPP
 #define PROJECTA_VG_GWFA_PIPELINE_HPP
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-    void notice_me();
-#ifdef __cplusplus
-}
-#endif
-
 // Class to handle the vg (gssw) alignment process with gwfa.
 class ProjectA_VG_GWFA_Aligner {
     

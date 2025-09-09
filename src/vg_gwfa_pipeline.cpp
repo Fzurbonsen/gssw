@@ -17,12 +17,13 @@
 #include <cstdint>
 
 #include "vg_gwfa_pipeline.hpp"
+#include "vg_gwfa_pipeline_wrapper.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
     void notice_me() {
-        fprintf(stderr, "notice_me\n");
+        cerr << "notice me!!!!!" << endl << endl << endl << endl;
         ProjectA_VG_GWFA_Aligner aligner(nullptr,
                                         nullptr,
                                         nullptr,
