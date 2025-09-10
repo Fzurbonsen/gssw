@@ -1,6 +1,6 @@
 /*
 
-    projectA:
+    gssw:
     vg_hgwfa_pipeline.hpp
     This file holds the definitions for the pipeline from vg to gwfa.
     Author: Frederic zur Bonsen <fzurbonsen@student.ethz.ch>

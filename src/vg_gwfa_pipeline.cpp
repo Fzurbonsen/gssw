@@ -1,6 +1,6 @@
 /*
 
-    projectA:
+    gssw:
     vg_hgwfa_pipeline.cpp
     This file holds the implementation for the pipeline from vg to gwfa.
     Author: Frederic zur Bonsen <fzurbonsen@student.ethz.ch>
@@ -18,23 +18,6 @@
 
 #include "vg_gwfa_pipeline.hpp"
 #include "vg_gwfa_pipeline_wrapper.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-    void notice_me() {
-        cerr << "notice me!!!!!" << endl << endl << endl << endl;
-        ProjectA_VG_GWFA_Aligner aligner(nullptr,
-                                        nullptr,
-                                        nullptr,
-                                        nullptr,
-                                        0,
-                                        0);
-        return;
-    }
-#ifdef __cplusplus
-}
-#endif
 
 
 // constructor
@@ -392,3 +375,41 @@ void ProjectA_VG_GWFA_Aligner::print(FILE* file) {
 gssw_graph_mapping* ProjectA_VG_GWFA_Aligner::graph_mapping() {
     return gm;
 }
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// wrapper function to allow gssw.c to call the traceback
+gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
+                                                    int32_t doing_pinning,
+                                                    int32_t num_tracebacks,
+                                                    int32_t find_internal_node_alts,
+                                                    const char* read,
+                                                    const char* qual,
+                                                    int32_t readLen,
+                                                    gssw_node** pinning_nodes,
+                                                    int32_t num_pinning_nodes,
+                                                    int8_t* nt_table,
+                                                    int8_t* score_matrix,
+                                                    uint8_t gap_open,
+                                                    uint8_t gap_extension,
+                                                    int8_t start_full_length_bonus,
+                                                    int8_t end_full_length_bonus) {
+
+    // work with class
+    ProjectA_VG_GWFA_Aligner aligner(graph,
+                                    read,
+                                    nt_table,
+                                    score_matrix,
+                                    gap_open,
+                                    gap_extension);
+
+    aligner.align_edlib(1);
+    return aligner.graph_mapping();
+}
+
+#ifdef __cplusplus
+}
+#endif

@@ -140,6 +140,26 @@ int main (int argc, char * const argv[]) {
     gssw_print_graph_mapping(gm, stdout);
     gssw_graph_mapping_destroy(gm);
 
+
+    printf("my output:\n");
+    gm = gwfa_graph_align_trace_back(graph,
+                                    0,
+                                    1,
+                                    0,
+                                    read_seq,
+                                    NULL,
+                                    strlen(read_seq),
+                                    NULL,
+                                    0,
+                                    nt_table,
+                                    mat,
+                                    1,
+                                    1,
+                                    0,
+                                    0);
+    gssw_print_graph_mapping(gm, stdout);
+    gssw_graph_mapping_destroy(gm);
+
     // note that nodes which are referred to in this graph are destroyed as well
     gssw_graph_destroy(graph);
 
