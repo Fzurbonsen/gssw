@@ -29,6 +29,8 @@ gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
                                                     int8_t start_full_length_bonus,
                                                     int8_t end_full_length_bonus);
 
+void test();
+
 #ifdef __cplusplus
 }
 #endif

@@ -410,6 +410,11 @@ gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
     return aligner.graph_mapping();
 }
 
+void test() {
+    cerr << "error" << endl;
+    exit(1);
+}
+
 #ifdef __cplusplus
 }
 #endif
