@@ -167,6 +167,8 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
     int insertion = gap_open;
     int deletion = gap_open;
 
+    int counter = ql; // counter to ensure that all of the read is aligned
+
     // iterate over all the nodes in the path to assign the corresponding cigar
     for (int i = 0; i < path.nv; ++i) {
         gssw_node* node = node_map2[path.v[i]]; // find the node with the help of the node map
@@ -185,6 +187,7 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
             if (f_cigar[cigar_idx] == 'M') {
                 node_size--;
                 local_score += match;
+                counter--;
                 gssw_cigar_push_back(g_cigar, f_cigar[cigar_idx], 1);
             } else if (f_cigar[cigar_idx] == 'D') {
                 node_size--;
@@ -192,17 +195,27 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
                 gssw_cigar_push_back(g_cigar, f_cigar[cigar_idx], 1);
             } else if (f_cigar[cigar_idx] == 'I') {
                 local_score += insertion;
+                counter--;
                 gssw_cigar_push_back(g_cigar, f_cigar[cigar_idx], 1);
             } else if (f_cigar[cigar_idx] == '=') {
                 node_size--;
                 local_score += match;
+                counter--;
                 gssw_cigar_push_back(g_cigar, 'M', 1);
             } else if (f_cigar[cigar_idx] == 'X') {
                 node_size--;
                 local_score += mismatch;
+                counter--;
                 gssw_cigar_push_back(g_cigar, 'M', 1);
             }
             cigar_idx++;
+        }
+
+        // if we are in the last cycle: ensure that all of the read is aligned
+        if (i+1 == path.nv) {
+            for (; counter > 0; --counter) {
+                gssw_cigar_push_back(g_cigar, 'M', 1);
+            }
         }
 
         nc.cigar = g_cigar;
@@ -210,6 +223,7 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
         gm->cigar.elements[i] = nc;
         gm->score = local_score;
     }
+
     done_all = true;
 }
 
