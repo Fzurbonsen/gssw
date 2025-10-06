@@ -286,6 +286,12 @@ void ProjectA_VG_GWFA_Aligner::_align_edlib_infix() {
 }
 
 
+// method to align with csswl
+void ProjectA_VG_GWFA_Aligner::_align_csswl() {
+    
+}
+
+
 // method to align with ed_infix
 void ProjectA_VG_GWFA_Aligner::_align_ed() {
 
@@ -346,7 +352,26 @@ void ProjectA_VG_GWFA_Aligner::align_edlib_infix(int32_t do_traceback) {
 }
 
 
-void ProjectA_VG_GWFA_Aligner::align_csswl(int32_t do_traceback) {} // ToDo
+// public method to align with the csswl algorithm
+void ProjectA_VG_GWFA_Aligner::align_csswl(int32_t do_traceback) {
+
+    if (!(do_traceback == 0 || do_traceback == 1 || do_traceback == 2)) {
+        cerr << "[projectA::vg_to_gwfa_pipeline]error: invalid traceback mode!" << endl;
+        cerr << "\t" << do_traceback << " is not an allowed traceback mode. Choose one of the following:" << endl
+                                                                << "\t0: perform no traceback" << endl
+                                                                << "\t1: perform granular traceback" << endl
+                                                                << "\t2: perform full traceback in gwfa" << endl;
+        exit(1);
+    }
+
+    traceback = do_traceback;
+    _align_ed();
+    _path_to_seq();
+    _align_csswl();
+    _cigar_to_gssw();
+
+}
+
 void ProjectA_VG_GWFA_Aligner::align_csswl_infix(int32_t do_traceback) {} // ToDo
 
 
@@ -427,7 +452,7 @@ gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
                                     gap_open,
                                     gap_extension);
 
-    aligner.align_edlib(1);
+    aligner.align_edlib_infix(1);
     return aligner.graph_mapping();
 }
 
