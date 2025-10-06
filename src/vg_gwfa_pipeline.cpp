@@ -35,7 +35,7 @@ ProjectA_VG_GWFA_Aligner::ProjectA_VG_GWFA_Aligner(gssw_graph* vg_graph,
         gap_extension(gap_extension),
         v0(0), // defines the first node as the start node for the alignment
         v1(-1), // no end node
-        max_lag(10), // no max lag
+        max_lag(0), // no max lag
         ql(strlen(read)),
         km(::km_init()),
         done_graph(false),
