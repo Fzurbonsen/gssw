@@ -214,6 +214,7 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
         // if we are in the last cycle: ensure that all of the read is aligned
         if (i+1 == path.nv) {
             for (; counter > 0; --counter) {
+                local_score += insertion;
                 gssw_cigar_push_back(g_cigar, 'I', 1);
             }
         }
@@ -221,8 +222,8 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
         nc.cigar = g_cigar;
         ref_pos = 0;
         gm->cigar.elements[i] = nc;
-        gm->score = local_score;
     }
+    gm->score = local_score;
 
     done_all = true;
 }
