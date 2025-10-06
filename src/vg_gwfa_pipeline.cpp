@@ -160,7 +160,12 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
     // create graph CIGAR struct for gssw
     gm->cigar.length = path.nv;
     gm->cigar.elements = (gssw_node_cigar*)malloc(path.nv * sizeof(gssw_node_cigar));
-    // int32_t local_score = 0;
+    int32_t local_score = 0;
+
+    int match = mat[0];
+    int mismatch = mat[0];
+    int insertion = gap_open;
+    int deletion = gap_open;
 
     // iterate over all the nodes in the path to assign the corresponding cigar
     for (int i = 0; i < path.nv; ++i) {
@@ -179,22 +184,22 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
             }
             if (f_cigar[cigar_idx] == 'M') {
                 node_size--;
-                // local_score += match;
+                local_score += match;
                 gssw_cigar_push_back(g_cigar, f_cigar[cigar_idx], 1);
             } else if (f_cigar[cigar_idx] == 'D') {
                 node_size--;
-                // local_score += deletion;
+                local_score += deletion;
                 gssw_cigar_push_back(g_cigar, f_cigar[cigar_idx], 1);
             } else if (f_cigar[cigar_idx] == 'I') {
-                // local_score += insertion;
+                local_score += insertion;
                 gssw_cigar_push_back(g_cigar, f_cigar[cigar_idx], 1);
             } else if (f_cigar[cigar_idx] == '=') {
                 node_size--;
-                // local_score += match;
+                local_score += match;
                 gssw_cigar_push_back(g_cigar, 'M', 1);
             } else if (f_cigar[cigar_idx] == 'X') {
                 node_size--;
-                // local_score += mismatch;
+                local_score += mismatch;
                 gssw_cigar_push_back(g_cigar, 'M', 1);
             }
             cigar_idx++;
@@ -203,6 +208,7 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
         nc.cigar = g_cigar;
         ref_pos = 0;
         gm->cigar.elements[i] = nc;
+        gm->score = local_score;
     }
     done_all = true;
 }
