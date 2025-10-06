@@ -212,12 +212,12 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
         }
 
         // if we are in the last cycle: ensure that all of the read is aligned
-        if (i+1 == path.nv) {
-            for (; counter > 0; --counter) {
-                local_score += insertion;
-                gssw_cigar_push_back(g_cigar, 'I', 1);
-            }
-        }
+        // if (i+1 == path.nv) {
+        //     for (; counter > 0; --counter) {
+        //         local_score += insertion;
+        //         gssw_cigar_push_back(g_cigar, 'I', 1);
+        //     }
+        // }
 
         nc.cigar = g_cigar;
         ref_pos = 0;
@@ -292,7 +292,7 @@ void ProjectA_VG_GWFA_Aligner::_align_csswl() {
 }
 
 
-// method to align with ed_infix
+// method to align with ed
 void ProjectA_VG_GWFA_Aligner::_align_ed() {
 
     // index the graph
