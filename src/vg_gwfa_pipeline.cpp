@@ -214,7 +214,7 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
         // if we are in the last cycle: ensure that all of the read is aligned
         if (i+1 == path.nv) {
             for (; counter > 0; --counter) {
-                gssw_cigar_push_back(g_cigar, 'M', 1);
+                gssw_cigar_push_back(g_cigar, 'I', 1);
             }
         }
 
