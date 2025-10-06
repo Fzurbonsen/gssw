@@ -312,6 +312,26 @@ void ProjectA_VG_GWFA_Aligner::_align_ed() {
 }
 
 
+// method to align with ed
+void ProjectA_VG_GWFA_Aligner::_align_ed_infix() {
+
+    // index the graph
+    ::gwf_ed_index(km, gwfa_graph);
+
+    // perform the alignment
+    score = ::gwf_ed_infix(km,
+                            gwfa_graph,
+                            ql,
+                            read,
+                            v0,
+                            v1,
+                            max_lag,
+                            traceback,
+                            &path);
+    done_align_s2g = true;
+}
+
+
 // public method to align with the edlib algorithm in prefix mode
 void ProjectA_VG_GWFA_Aligner::align_edlib(int32_t do_traceback) {
     
@@ -345,7 +365,7 @@ void ProjectA_VG_GWFA_Aligner::align_edlib_infix(int32_t do_traceback) {
     }
 
     traceback = do_traceback;
-    _align_ed();
+    _align_ed_infix();
     _path_to_seq();
     _align_edlib_infix();
     _cigar_to_gssw();
