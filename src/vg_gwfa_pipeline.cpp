@@ -472,7 +472,8 @@ gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
                                     gap_open,
                                     gap_extension);
 
-    aligner.align_edlib_infix(1);
+    // aligner.align_edlib_infix(1);
+    aligner.align_edlib(1);
     return aligner.graph_mapping();
 }
 
