@@ -85,7 +85,7 @@ void ProjectA_VG_GWFA_Aligner::_print_path(FILE* file) {
 
 // print the gwfa path
 void ProjectA_VG_GWFA_Aligner::_print_graph_cigar(FILE* file) {
-
+    // ToDo
 }
 
 
@@ -306,9 +306,71 @@ void ProjectA_VG_GWFA_Aligner::_align_edlib_infix() {
 }
 
 
+// helper function to build CIGAR string
+static char* construct_csswl_cigar_string(const s_align* result) {
+    if (!result || result->cigarLen == 0) return NULL;
+
+    // First, estimate the required buffer size
+    size_t buffer_size = 0;
+    for (int i = 0; i < result->cigarLen; ++i) {
+        int len = cigar_int_to_len(result->cigar[i]);
+        char op = cigar_int_to_op(result->cigar[i]);
+        buffer_size += snprintf(NULL, 0, "%d%c", len, op);
+    }
+    buffer_size += 1; // For null-terminator
+
+    // Allocate memory
+    char* cigar_string = (char*)malloc(buffer_size);
+    if (!cigar_string) return NULL;
+
+    // Construct the CIGAR string
+    char* ptr = cigar_string;
+    for (int i = 0; i < result->cigarLen; ++i) {
+        int len = cigar_int_to_len(result->cigar[i]);
+        char op = cigar_int_to_op(result->cigar[i]);
+        ptr += sprintf(ptr, "%d%c", len, op);
+    }
+
+    return cigar_string;
+}
+
+
 // method to align with csswl
 void ProjectA_VG_GWFA_Aligner::_align_csswl() {
-    
+    int8_t* num = (int8_t*)malloc(ql * sizeof(int8_t));
+    int8_t* ref_num = (int8_t*)malloc(reference.size() * sizeof(int8_t));
+
+    s_profile* profile;
+    s_align* result;
+
+    // convert read to num
+    for (int m = 0; m < ql; ++m) {
+        num[m] = nt_table[(int)read[m]];
+    }
+    profile = ssw_init(num, ql, mat, 5, 2);
+
+    // convert ref to num
+    for (int m = 0; m < reference.size(); ++m) {
+        ref_num[m] = nt_table[(int)reference.c_str()[m]];
+    }
+
+    // perform alignment
+    result = ssw_align(profile, ref_num, reference.size(), gap_open, gap_extension, 1, 0, 0, 15);
+
+    // construct CIGAR string
+    char* csswl_cigar = construct_csswl_cigar_string(result);
+    cigar = csswl_cigar;
+
+    gm->position = result->ref_begin1;
+    gm->score = result->score1;
+
+    free(num);
+    free(ref_num);
+    free(csswl_cigar);
+    align_destroy(result);
+    init_destroy(profile);
+
+    done_align_s2s = true;
 }
 
 
@@ -409,10 +471,25 @@ void ProjectA_VG_GWFA_Aligner::align_csswl(int32_t do_traceback) {
     _path_to_seq();
     _align_csswl();
     _cigar_to_gssw();
-
 }
 
-void ProjectA_VG_GWFA_Aligner::align_csswl_infix(int32_t do_traceback) {} // ToDo
+void ProjectA_VG_GWFA_Aligner::align_csswl_infix(int32_t do_traceback) {
+
+    if (!(do_traceback == 0 || do_traceback == 1 || do_traceback == 2)) {
+        cerr << "[projectA::vg_to_gwfa_pipeline]error: invalid traceback mode!" << endl;
+        cerr << "\t" << do_traceback << " is not an allowed traceback mode. Choose one of the following:" << endl
+                                                                << "\t0: perform no traceback" << endl
+                                                                << "\t1: perform granular traceback" << endl
+                                                                << "\t2: perform full traceback in gwfa" << endl;
+        exit(1);
+    }
+
+    traceback = do_traceback;
+    _align_ed_infix();
+    _path_to_seq();
+    _align_csswl();
+    _cigar_to_gssw();
+}
 
 
 // public method to print the contents of the class
@@ -492,8 +569,9 @@ gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
                                     gap_open,
                                     gap_extension);
 
-    aligner.align_edlib_infix(1);
+    // aligner.align_edlib_infix(1);
     // aligner.align_edlib(1);
+    aligner.align_csswl_infix(1);
     return aligner.graph_mapping();
 }
 
