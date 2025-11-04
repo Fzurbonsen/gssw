@@ -35,7 +35,7 @@ ProjectA_VG_GWFA_Aligner::ProjectA_VG_GWFA_Aligner(gssw_graph* vg_graph,
         gap_extension(gap_extension),
         v0(0), // defines the first node as the start node for the alignment
         v1(-1), // no end node
-        max_lag(5), // no max lag / test max lag
+        max_lag(0), // no max lag / test max lag
         ql(strlen(read)),
         km(::km_init()),
         done_graph(false),
@@ -162,10 +162,13 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
     gm->cigar.elements = (gssw_node_cigar*)malloc(path.nv * sizeof(gssw_node_cigar));
     int32_t local_score = 0;
 
+    // scoring of matches and mismatches (we do not consider the entire scoring matrix, this is given from gssw)
     int match = mat[0];
-    int mismatch = mat[0];
-    int insertion = gap_open;
-    int deletion = gap_open;
+    int mismatch = mat[1];
+
+    // handle alignment gaps
+    int deletion_gap = 0; // indicator to track if we have an open deletion gap
+    int insertion_gap = 0; // indicator to track if we have an open insertion gap
 
     int counter = ql; // counter to ensure that all of the read is aligned
 
@@ -188,25 +191,41 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
                 node_size--;
                 local_score += match;
                 counter--;
+                insertion_gap = 0;
+                deletion_gap = 0;
                 gssw_cigar_push_back(g_cigar, f_cigar[cigar_idx], 1);
+
             } else if (f_cigar[cigar_idx] == 'D') {
+                if (!deletion_gap) local_score -= gap_open;
                 node_size--;
-                local_score += deletion;
+                local_score -= gap_extension;
+                insertion_gap = 0;
+                deletion_gap = 1;
                 gssw_cigar_push_back(g_cigar, f_cigar[cigar_idx], 1);
+
             } else if (f_cigar[cigar_idx] == 'I') {
-                local_score += insertion;
+                if (!insertion_gap) local_score -= gap_open;
+                local_score -= gap_extension;
                 counter--;
+                insertion_gap = 1;
+                deletion_gap = 0;
                 gssw_cigar_push_back(g_cigar, f_cigar[cigar_idx], 1);
+
             } else if (f_cigar[cigar_idx] == '=') {
                 node_size--;
                 local_score += match;
                 counter--;
+                insertion_gap = 0;
+                deletion_gap = 0;
                 gssw_cigar_push_back(g_cigar, 'M', 1);
+
             } else if (f_cigar[cigar_idx] == 'X') {
                 node_size--;
                 local_score += mismatch;
                 counter--;
-                gssw_cigar_push_back(g_cigar, 'M', 1);
+                insertion_gap = 0;
+                deletion_gap = 0;
+                gssw_cigar_push_back(g_cigar, 'X', 1);
             }
             cigar_idx++;
         }
@@ -214,7 +233,8 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
         // if we are in the last cycle: ensure that all of the read is aligned
         if (i+1 == path.nv) {
             for (; counter > 0; --counter) {
-                local_score += insertion;
+                if (!insertion_gap) local_score -= gap_open;
+                local_score -= gap_extension;
                 gssw_cigar_push_back(g_cigar, 'I', 1);
             }
         }
@@ -223,7 +243,7 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
         ref_pos = 0;
         gm->cigar.elements[i] = nc;
     }
-    gm->score = local_score;
+    gm->score = local_score + 5; // 5 as it always has full length bonus
 
     done_all = true;
 }
@@ -238,7 +258,7 @@ void ProjectA_VG_GWFA_Aligner::_align_edlib_global() {
                                         edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_PATH, NULL, 0));
     char* edlib_cigar = edlibAlignmentToCigar(result.alignment,
                                         result.alignmentLength,
-                                        EDLIB_CIGAR_STANDARD);
+                                        EDLIB_CIGAR_EXTENDED);
     cigar = edlib_cigar;
     free(edlib_cigar);
     gm->score = -result.editDistance;
@@ -257,7 +277,7 @@ void ProjectA_VG_GWFA_Aligner::_align_edlib_prefix() {
                                         edlibNewAlignConfig(-1, EDLIB_MODE_SHW, EDLIB_TASK_PATH, NULL, 0));
     char* edlib_cigar = edlibAlignmentToCigar(result.alignment,
                                         result.alignmentLength,
-                                        EDLIB_CIGAR_STANDARD);
+                                        EDLIB_CIGAR_EXTENDED);
     cigar = edlib_cigar;
     free(edlib_cigar);
     gm->score = -result.editDistance;
@@ -276,7 +296,7 @@ void ProjectA_VG_GWFA_Aligner::_align_edlib_infix() {
                                         edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_PATH, NULL, 0));
     char* edlib_cigar = edlibAlignmentToCigar(result.alignment,
                                         result.alignmentLength,
-                                        EDLIB_CIGAR_STANDARD);
+                                        EDLIB_CIGAR_EXTENDED);
     cigar = edlib_cigar;
     free(edlib_cigar);
     gm->score = -result.editDistance;
@@ -472,8 +492,8 @@ gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
                                     gap_open,
                                     gap_extension);
 
-    // aligner.align_edlib_infix(1);
-    aligner.align_edlib(1);
+    aligner.align_edlib_infix(1);
+    // aligner.align_edlib(1);
     return aligner.graph_mapping();
 }
 
