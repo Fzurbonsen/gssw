@@ -155,10 +155,17 @@ void ProjectA_VG_GWFA_Aligner::_prune_leading_nodes() {
 
     // keep going while the offest is bigger then the size of the current node
     while (ref_pos >= node->len) {
+        fprintf(stderr, "ref_pos: %i\n", ref_pos);
+        fprintf(stderr, "node_len: %i\n", node->len);
+        fprintf(stderr, "idx: %i\n", idx);
         ref_pos -= node->len;
         idx++;
         node = node_map2[path.v[idx]];
     }
+
+    fprintf(stderr, "ref_pos: %i\n", ref_pos);
+    fprintf(stderr, "node_len: %i\n", node->len);
+    fprintf(stderr, "idx: %i\n", idx);
 
     // prune the leading nodes from the path
     path_start = idx;
@@ -173,6 +180,7 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
 
     // we first prune the leading nodes
     _prune_leading_nodes();
+    path_start = 0;
 
     // flatten the CIGAR to make it easier to handle
     string f_cigar; // flattened CIGAR
