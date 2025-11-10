@@ -43,6 +43,7 @@ class ProjectA_VG_GWFA_Aligner {
         int8_t* mat;
         uint8_t gap_open;
         uint8_t gap_extension;
+        uint8_t full_length_bonus;
 
         // data for gwfa
         void* km;
@@ -62,6 +63,7 @@ class ProjectA_VG_GWFA_Aligner {
         int32_t score;
         gwf_path_t path;
         int32_t path_start;
+        int32_t path_end;
         string reference;
         string cigar;
 
@@ -83,7 +85,8 @@ class ProjectA_VG_GWFA_Aligner {
                                 int8_t* nt_table,
                                 int8_t* mat,
                                 uint8_t gap_open,
-                                uint8_t gap_extension);
+                                uint8_t gap_extension,
+                                uint8_t full_length_bonus);
         ~ProjectA_VG_GWFA_Aligner();
     
     // methods

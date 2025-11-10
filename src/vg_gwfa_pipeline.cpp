@@ -26,13 +26,15 @@ ProjectA_VG_GWFA_Aligner::ProjectA_VG_GWFA_Aligner(gssw_graph* vg_graph,
                                                     int8_t* nt_table,
                                                     int8_t* mat,
                                                     uint8_t gap_open,
-                                                    uint8_t gap_extension)
+                                                    uint8_t gap_extension,
+                                                    uint8_t full_length_bonus)
     :   vg_graph(vg_graph),
         read(read),
         nt_table(nt_table),
         mat(mat),
         gap_open(gap_open),
         gap_extension(gap_extension),
+        full_length_bonus(full_length_bonus),
         v0(0), // defines the first node as the start node for the alignment
         v1(-1), // no end node
         max_lag(0), // no max lag / test max lag
@@ -232,15 +234,15 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
 
             } else if (f_cigar[cigar_idx] == 'D') {
                 if (!deletion_gap) local_score -= gap_open;
+                if (deletion_gap) local_score -= gap_extension;
                 node_size--;
-                local_score -= gap_extension;
                 insertion_gap = 0;
                 deletion_gap = 1;
                 gssw_cigar_push_back(g_cigar, f_cigar[cigar_idx], 1);
 
             } else if (f_cigar[cigar_idx] == 'I') {
                 if (!insertion_gap) local_score -= gap_open;
-                local_score -= gap_extension;
+                if (insertion_gap) local_score -= gap_extension;
                 counter--;
                 insertion_gap = 1;
                 deletion_gap = 0;
@@ -265,27 +267,45 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
             cigar_idx++;
         }
 
-        // if we are in the last cycle: ensure that all of the read is aligned
-        if (i+1 == path.nv) {
-            if (counter >= 5) { // hardcodeded soft clipping at the end THIS IS NOT GOOD
-                score -= 5;
-                for (; counter > 0; --counter) {
-                gssw_cigar_push_back(g_cigar, 'S', 1);
-                }
-            } else { // This case occurs for edLib which shouldn't be the case -> bug ToDo 
-                for (; counter > 0; --counter) {
-                    if (!insertion_gap) local_score -= gap_open;
-                    local_score -= gap_extension;
-                    gssw_cigar_push_back(g_cigar, 'I', 1);
+        // check if we have reached the end of the CIGAR or the end of the path
+        if (cigar_idx >= f_cigar.size() || i+1 == path.nv) {
+            // check if there is still seqeuence left to align
+            if (counter) {
+                // check if it is worth performing a full alignment
+                if (gap_open + (counter - 1) * gap_extension < full_length_bonus) { // this does not work 100% as the alignment start by csswl cannot be controlled
+                    for (; counter > 0; --counter) {
+                        if (!insertion_gap) local_score -= gap_open;
+                        if (insertion_gap) local_score -= gap_extension;
+                        insertion_gap = 1;
+                        gssw_cigar_push_back(g_cigar, 'I', 1);
+                    }
+                    local_score += full_length_bonus;
+                } else {
+                    for (; counter > 0; --counter) {
+                        gssw_cigar_push_back(g_cigar, 'S', 1);
+                    }
                 }
             }
+
+            // check if we are at the end of the node
+            if (node_size) {
+                for (; node_size; --node_size) {
+                    gssw_cigar_push_back(g_cigar, 'S', 1);
+                }
+            }
+
+            path_end = i+1;
+            nc.cigar = g_cigar;
+            gm->cigar.elements[i - path_start] = nc;
+            break;
         }
 
         nc.cigar = g_cigar;
         ref_pos = 0;
         gm->cigar.elements[i - path_start] = nc;
     }
-    // gm->score = local_score + 5; // 5 as it always has full length bonus
+    gm->score = local_score; // 5 as it always has full length bonus
+    gm->cigar.length = path_end - path_start;
 
     done_all = true;
 }
@@ -617,7 +637,8 @@ gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
                                     nt_table,
                                     score_matrix,
                                     gap_open,
-                                    gap_extension);
+                                    gap_extension,
+                                    start_full_length_bonus);
 
     // aligner.print_graph_read_pair(stderr);
 
