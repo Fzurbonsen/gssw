@@ -92,6 +92,7 @@ class ProjectA_VG_GWFA_Aligner {
         void align_edlib_infix(int32_t do_traceback);
         void align_csswl(int32_t do_traceback);
         void align_csswl_infix(int32_t do_traceback);
+        void print_graph_read_pair(FILE* file);
         void print(FILE* file);
         gssw_graph_mapping* graph_mapping();
 
