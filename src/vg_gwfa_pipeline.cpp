@@ -55,7 +55,11 @@ ProjectA_VG_GWFA_Aligner::~ProjectA_VG_GWFA_Aligner() {
     if (gwfa_graph) {
         gwf_cleanup(km, gwfa_graph);
         int32_t i;
-        free(gwfa_graph->len); free(gwfa_graph->seq); free(gwfa_graph->arc); free(gwfa_graph->src); free(gwfa_graph);
+        free(gwfa_graph->len);
+        free(gwfa_graph->seq);
+        free(gwfa_graph->arc);
+        free(gwfa_graph->src);
+        free(gwfa_graph);
         gwfa_graph = nullptr;
     }
     km_destroy(km);
@@ -136,8 +140,39 @@ void ProjectA_VG_GWFA_Aligner::_path_to_seq() {
 }
 
 
+// method to prune the nodes at the start of the alignment that are skipped by S2S offset
+void ProjectA_VG_GWFA_Aligner::_prune_leading_nodes() {
+
+    int32_t ref_pos = gm->position; // offset at the beginning of the sequence
+    int32_t idx = 0; // index to keep track of the position in the path
+    gssw_node* node = node_map2[path.v[idx]]; // start at the beginning of the path
+
+    // check if we have to prune at all
+    if (ref_pos < node->len) {
+        path_start = 0;
+        return;
+    }
+
+    // keep going while the offest is bigger then the size of the current node
+    while (ref_pos >= node->len) {
+        ref_pos -= node->len;
+        idx++;
+        node = node_map2[path.v[idx]];
+    }
+
+    // prune the leading nodes from the path
+    path_start = idx;
+
+    // adjust position in the first node
+    gm->position = ref_pos;
+}
+
+
 // method to transform the CIGAR string into the gssw graph-CIGAR
 void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
+
+    // we first prune the leading nodes
+    _prune_leading_nodes();
 
     // flatten the CIGAR to make it easier to handle
     string f_cigar; // flattened CIGAR
@@ -158,7 +193,7 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
     int32_t cigar_idx = 0;
 
     // create graph CIGAR struct for gssw
-    gm->cigar.length = path.nv;
+    gm->cigar.length = path.nv - path_start;
     gm->cigar.elements = (gssw_node_cigar*)malloc(path.nv * sizeof(gssw_node_cigar));
     int32_t local_score = 0;
 
@@ -173,7 +208,7 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
     int counter = ql; // counter to ensure that all of the read is aligned
 
     // iterate over all the nodes in the path to assign the corresponding cigar
-    for (int i = 0; i < path.nv; ++i) {
+    for (int i = path_start; i < path.nv; ++i) {
         gssw_node* node = node_map2[path.v[i]]; // find the node with the help of the node map
         gssw_node_cigar nc;
         nc.node = node;
@@ -232,10 +267,17 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
 
         // if we are in the last cycle: ensure that all of the read is aligned
         if (i+1 == path.nv) {
-            for (; counter > 0; --counter) {
-                if (!insertion_gap) local_score -= gap_open;
-                local_score -= gap_extension;
-                gssw_cigar_push_back(g_cigar, 'I', 1);
+            if (counter >= 5) { // hardcodeded soft clipping at the end THIS IS NOT GOOD
+                score -= 5;
+                for (; counter > 0; --counter) {
+                gssw_cigar_push_back(g_cigar, 'S', 1);
+                }
+            } else { // This case occurs for edLib which shouldn't be the case -> bug ToDo 
+                for (; counter > 0; --counter) {
+                    if (!insertion_gap) local_score -= gap_open;
+                    local_score -= gap_extension;
+                    gssw_cigar_push_back(g_cigar, 'I', 1);
+                }
             }
         }
 
@@ -243,7 +285,7 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
         ref_pos = 0;
         gm->cigar.elements[i] = nc;
     }
-    gm->score = local_score + 5; // 5 as it always has full length bonus
+    // gm->score = local_score + 5; // 5 as it always has full length bonus
 
     done_all = true;
 }

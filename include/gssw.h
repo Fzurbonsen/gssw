@@ -5,8 +5,8 @@
  *
  */
 
-#ifndef SSW_H
-#define SSW_H
+#ifndef GSSW_H
+#define GSSW_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -789,4 +789,4 @@ void gssw_sse2_disable();
 #endif	// __cplusplus
 
 #undef SIMDE_ENABLE_NATIVE_ALIASES
-#endif	// SSW_H
+#endif	// GSSW_H

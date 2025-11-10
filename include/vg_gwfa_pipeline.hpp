@@ -61,6 +61,7 @@ class ProjectA_VG_GWFA_Aligner {
         // internal values
         int32_t score;
         gwf_path_t path;
+        int32_t path_start;
         string reference;
         string cigar;
 
@@ -106,6 +107,10 @@ class ProjectA_VG_GWFA_Aligner {
         void _print_path(FILE* file); // method to print the gwfa path
         void _print_graph_cigar(FILE* file); // method to print the graph-CIGAR
         void _gssw_to_gwfa(); // transforms the gssw input data into the gwfa data structures
+
+        void _prune_leading_nodes(); // prune nodes that are skipped due to the starting offset
+        void _prune_trailing_nodes(); // prune nodes that are skipped due to alignment end
+
         void _cigar_to_gssw(); // parses a CIGAR and stores it into the gssw data struct
 
         
