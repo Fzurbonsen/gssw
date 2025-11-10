@@ -194,7 +194,7 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
 
     // create graph CIGAR struct for gssw
     gm->cigar.length = path.nv - path_start;
-    gm->cigar.elements = (gssw_node_cigar*)malloc(path.nv * sizeof(gssw_node_cigar));
+    gm->cigar.elements = (gssw_node_cigar*)malloc((path.nv - path_start) * sizeof(gssw_node_cigar));
     int32_t local_score = 0;
 
     // scoring of matches and mismatches (we do not consider the entire scoring matrix, this is given from gssw)
@@ -534,6 +534,14 @@ void ProjectA_VG_GWFA_Aligner::align_csswl_infix(int32_t do_traceback) {
 }
 
 
+// public method to print the graph read pair
+void ProjectA_VG_GWFA_Aligner::print_graph_read_pair(FILE* file) {
+    fprintf(file, "\n");
+    _print_graph(file);
+    fprintf(file, "%s\n", read);
+}
+
+
 // public method to print the contents of the class
 void ProjectA_VG_GWFA_Aligner::print(FILE* file) {
     fprintf(file, "\n:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::\n");
@@ -610,6 +618,8 @@ gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
                                     score_matrix,
                                     gap_open,
                                     gap_extension);
+
+    aligner.print_graph_read_pair(stderr);
 
     // aligner.align_edlib_infix(1);
     // aligner.align_edlib(1);
