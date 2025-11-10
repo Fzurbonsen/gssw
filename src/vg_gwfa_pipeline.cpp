@@ -619,7 +619,7 @@ gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
                                     gap_open,
                                     gap_extension);
 
-    aligner.print_graph_read_pair(stderr);
+    // aligner.print_graph_read_pair(stderr);
 
     // aligner.align_edlib_infix(1);
     // aligner.align_edlib(1);
