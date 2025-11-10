@@ -13,6 +13,7 @@ OBJ+=$(OBJ_DIR)/vg_gwfa_pipeline.o
 EXE=gssw_example
 EXEADJ=gssw_example_adj
 EXETEST=gssw_test
+EXE_PIPELINE_TEST=vg_gwfa_pipeline_test
 
 LIB_FLAGS= -lz -lm -lstdc++ -ledlib -lcsswl -lgwfa
 LDFLAGS = -L$(LIB_DIR)
@@ -30,7 +31,7 @@ INCLUDE+=$(SRC_DIR)/vg_gwfa_pipeline_wrapper.h
 INCLUDE+=$(SRC_DIR)/gwfa/*.h
 INCLUDE+=$(SRC_DIR)/edlib/edlib/include/edlib.h
 
-all:$(BIN_DIR)/$(EXE) $(BIN_DIR)/$(EXEADJ) $(BIN_DIR)/$(EXETEST) $(LIB_DIR)/libgssw.a
+all:$(BIN_DIR)/$(EXE) $(BIN_DIR)/$(EXEADJ) $(BIN_DIR)/$(EXETEST) $(BIN_DIR)/$(EXE_PIPELINE_TEST) $(LIB_DIR)/libgssw.a
 
 $(BIN_DIR)/$(EXE):$(OBJ) $(SRC_DIR)/example.c
 	# Make dest directory
@@ -44,6 +45,10 @@ $(BIN_DIR)/$(EXEADJ):$(OBJ) $(SRC_DIR)/example_adj.c
 $(BIN_DIR)/$(EXETEST):$(OBJ) $(SRC_DIR)/gssw_test.c
 	@mkdir -p $(@D)
 	$(CC) $(LDFLAGS) $(CPPFLAGS) $(CFLAGS) $(SRC_DIR)/gssw_test.c -o $@ $(OBJ) $(LIB_FLAGS)
+
+$(BIN_DIR)/$(EXE_PIPELINE_TEST): $(OBJ) $(SRC_DIR)/vg_gwfa_pipeline_test.c
+	@mkdir -p $(@D)
+	$(CC) $(LDFLAGS) $(CPPFLAGS) $(CFLAGS) $(SRC_DIR)/vg_gwfa_pipeline_test.c -o $@ $(OBJ) $(LIB_FLAGS)
 
 # $(OBJ):$(INC_DIR) $(LIB) $(SRC_DIR)/gssw.c $(SRC_DIR)/vg_gwfa_pipeline.cpp
 # 	@mkdir -p $(@D)
