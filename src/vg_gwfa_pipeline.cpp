@@ -629,7 +629,9 @@ gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
                                                     uint8_t gap_open,
                                                     uint8_t gap_extension,
                                                     int8_t start_full_length_bonus,
-                                                    int8_t end_full_length_bonus) {
+                                                    int8_t end_full_length_bonus,
+                                                    vg_gwfa_pipeline_algorithm_type_e algorithm_type,
+                                                    int8_t print_debug) {
 
     // work with class
     ProjectA_VG_GWFA_Aligner aligner(graph,
@@ -640,7 +642,23 @@ gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
                                     gap_extension,
                                     start_full_length_bonus);
 
-    // aligner.print_graph_read_pair(stderr);
+    if (print_debug) {
+        aligner.print_graph_read_pair(stderr);
+    }
+
+    switch (algorithm_type) {
+        case GWFA_EDLIB_PREFIX:
+            aligner.align_edlib(1);
+            break;
+        case GWFA_EDLIB_INFIX:
+            aligner.align_edlib_infix(1);
+            break;
+        case GWFA_CSSWL_PREFIX:
+            aligner.align_csswl(1);
+            break;
+        case GWFA_CSSWL_INFIX:
+            aligner.align_csswl_infix(1);
+    }
 
     // aligner.align_edlib_infix(1);
     // aligner.align_edlib(1);

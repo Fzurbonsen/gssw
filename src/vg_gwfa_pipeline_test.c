@@ -81,7 +81,9 @@ void test_case1() {
                                                             gap_open,
                                                             gap_extension,
                                                             full_length_bonus,
-                                                            full_length_bonus);
+                                                            full_length_bonus,
+                                                            GWFA_CSSWL_INFIX,
+                                                            1);
 
     gssw_print_graph_cigar(&gm1->cigar, stderr);
     fprintf(stderr, "gssw: %i\n", gm1->score);
@@ -195,7 +197,9 @@ void test_case2() {
                                                             gap_open,
                                                             gap_extension,
                                                             full_length_bonus,
-                                                            full_length_bonus);
+                                                            full_length_bonus,
+                                                            GWFA_CSSWL_INFIX,
+                                                            1);
 
     gssw_print_graph_cigar(&gm1->cigar, stderr);
     fprintf(stderr, "gssw: %i\n", gm1->score);

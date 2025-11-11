@@ -156,7 +156,9 @@ int main (int argc, char * const argv[]) {
                                     1,
                                     1,
                                     0,
-                                    0);
+                                    0,
+                                    GWFA_CSSWL_INFIX,
+                                    1);
     gssw_print_graph_mapping(gm, stdout);
     gssw_graph_mapping_destroy(gm);
 
