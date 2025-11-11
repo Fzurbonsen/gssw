@@ -237,7 +237,7 @@ void test_case3() {
 
 
     // create graph
-    gssw_node *node1, *node2;
+    gssw_node *node1;
     node1 = gssw_node_create("Node1", 1, "GCTTTGATGCCTATGGTGGAAAAGGAAATATCCGCCCATAAAAACTAGACAGCAGCATTCTCAGAAAGTTGTTTGTGTTGTGTGCATTCAACTCACAGAGTTGAACCTTTCCTTTGATTGAGCAGTTTTGAAAAAGTCTTTTTGTAGAATCTGCAAGTGGATATTTGGAGCAGTTTGAGGCCTATGGTGTAAAAGGAAATATCTTCACATGAAAACTAGACAGAAGCATTCTCAGAAACTTCTTTGTGATGAGTTCATTCAATTCACATAGTTGAACATTTCTTTTGATAGAGTAGTTTTGAAACACTCTTTCTGTAGAATCTACAAGTGGATATTTGGAGCACATTGAAGCCTATGATGGAAAAGGAAATATCTTCACATACAAACTAGACAGAAGCATTCTCAGAAACTTCTTTGTGATAAGTGCATTCAACTCACAGAGTCGAACCTTTCTGTTGATAGAGCAGTTTTAAATCACTCTTTTTCTAGAATCTGAAAGTGGATATTTGGAGAGCTTTGAGGCCTATGGTGGAAAAGGAAATACCTACGCATAAAAACTATGCGGAAGCATTCTCAGAAATATCTTTGTGATGAGTGCATTCAACTCACAGAGTTGAACATTTATGTTGATAGAGGAGTTTTAAAACACTCTTTTTCAGGAATCTGAAAGTGGATATTTGGAGCGCTTTGAGGCCTATGGTGGAAAAGGAAACACCTTCACAAAAAAAACTAGAGCAGAATCATTCTCAGGAACTTCTTTGTGATGTGTGCATTCAACTCACAGAGTTGAACCTTTTTATTTGATAGAGCAGTTTTGAAACACTATTTTTGTACAATCTGCGGTTGGATATTTGGAGCGCTTTGATGCCTATGGTGGAAAACGAAATATCCGCACATAAAATCTAGACAGCAGCATTCTCAGAAACTTGTTAGTGTTGTGTGCATTCAGCTCACAGAGTTGAACCTTTCCTTTGATTGAGCAGTTTTGAAATAGTCTTTTTGTAGAATCCACAAGTGGATATTT", nt_table, mat);
 
 
@@ -302,13 +302,195 @@ void test_case3() {
 
 
 
+void test_case4() {
+
+    // set alignment parameters
+    int8_t match = 1;
+    int8_t mismatch = 1;
+    uint8_t gap_open = 1;
+    uint8_t gap_extension = 1;
+    int8_t full_length_bonus = 0;
+
+    int8_t* nt_table = gssw_create_nt_table();
+    int8_t* mat = gssw_create_score_matrix(match, mismatch);
+
+
+                    
+    // set read      // TTCAAGCAGAAGACGATCAAGTGACTGGAGTTCAGACGTGTGTGTAGTGC
+    const char* read = "TTCAAGCAGAAGACGATCAAGTGACTGGAGTTCAGACGTGTGTGTAGTGC";
+
+
+
+    // create graph
+    gssw_node *node1;                  // TTCAAGCAGAAGACTCACAGCAGGTTTGTAGTGC
+    node1 = gssw_node_create("Node1", 1, "TTCAAGCAGAAGACTCACAGCAGGTTTGTAGTGC", nt_table, mat);
+
+
+
+    gssw_graph* graph = gssw_graph_create(1);
+    gssw_graph_add_node(graph, node1);
+
+
+
+    // perform alignment
+    gssw_graph_fill_pinned(graph,
+                            read,
+                            nt_table,
+                            mat,
+                            gap_open,
+                            gap_extension,
+                            full_length_bonus,
+                            full_length_bonus,
+                            15,
+                            2,
+                            1);
+
+    
+
+    gssw_graph_mapping* gm1 = gssw_graph_trace_back(graph,
+                                                    read,
+                                                    strlen(read),
+                                                    nt_table,
+                                                    mat,
+                                                    gap_open,
+                                                    gap_extension,
+                                                    full_length_bonus,
+                                                    full_length_bonus);
+
+    // gssw_graph_print_score_matrices(graph, read, strlen(read), stdout);
+
+    gssw_graph_mapping* gm2 = gwfa_graph_align_trace_back(graph,
+                                                            0,
+                                                            0,
+                                                            false,
+                                                            read,
+                                                            NULL,
+                                                            strlen(read),
+                                                            NULL,
+                                                            0,
+                                                            nt_table,
+                                                            mat,
+                                                            gap_open,
+                                                            gap_extension,
+                                                            full_length_bonus,
+                                                            full_length_bonus,
+                                                            GWFA_CSSWL_INFIX,
+                                                            1);
+
+    gssw_print_graph_cigar(&gm1->cigar, stderr);
+    fprintf(stderr, "offset: %i\n", gm1->position);
+    fprintf(stderr, "gssw: %i\n", gm1->score);
+    gssw_print_graph_cigar(&gm2->cigar, stderr);
+    fprintf(stderr, "offset: %i\n", gm2->position);
+    fprintf(stderr, "gwfa: %i\n", gm2->score);
+
+    gssw_graph_mapping_destroy(gm1);
+    gssw_graph_mapping_destroy(gm2);
+    gssw_graph_destroy(graph);
+    free(nt_table);
+    free(mat);
+}
+
+
+
+void test_case5() {
+
+    // set alignment parameters
+    int8_t match = 1;
+    int8_t mismatch = 1;
+    uint8_t gap_open = 1;
+    uint8_t gap_extension = 1;
+    int8_t full_length_bonus = 0;
+
+    int8_t* nt_table = gssw_create_nt_table();
+    int8_t* mat = gssw_create_score_matrix(match, mismatch);
+
+
+
+    // set read
+    const char* read = "CCCCTTTCCCC";
+
+
+
+    // create graph
+    gssw_node *node1;
+    node1 = gssw_node_create("Node1", 1, "CCCCGGGCCCC", nt_table, mat);
+
+
+
+    gssw_graph* graph = gssw_graph_create(1);
+    gssw_graph_add_node(graph, node1);
+
+
+
+    // perform alignment
+    gssw_graph_fill_pinned(graph,
+                            read,
+                            nt_table,
+                            mat,
+                            gap_open,
+                            gap_extension,
+                            full_length_bonus,
+                            full_length_bonus,
+                            15,
+                            2,
+                            1);
+
+    
+
+    gssw_graph_mapping* gm1 = gssw_graph_trace_back(graph,
+                                                    read,
+                                                    strlen(read),
+                                                    nt_table,
+                                                    mat,
+                                                    gap_open,
+                                                    gap_extension,
+                                                    full_length_bonus,
+                                                    full_length_bonus);
+
+    // gssw_graph_print_score_matrices(graph, read, strlen(read), stdout);
+
+    gssw_graph_mapping* gm2 = gwfa_graph_align_trace_back(graph,
+                                                            0,
+                                                            0,
+                                                            false,
+                                                            read,
+                                                            NULL,
+                                                            strlen(read),
+                                                            NULL,
+                                                            0,
+                                                            nt_table,
+                                                            mat,
+                                                            gap_open,
+                                                            gap_extension,
+                                                            full_length_bonus,
+                                                            full_length_bonus,
+                                                            GWFA_CSSWL_INFIX,
+                                                            1);
+
+    gssw_print_graph_cigar(&gm1->cigar, stderr);
+    fprintf(stderr, "offset: %i\n", gm1->position);
+    fprintf(stderr, "gssw: %i\n", gm1->score);
+    gssw_print_graph_cigar(&gm2->cigar, stderr);
+    fprintf(stderr, "offset: %i\n", gm2->position);
+    fprintf(stderr, "gwfa: %i\n", gm2->score);
+
+    gssw_graph_mapping_destroy(gm1);
+    gssw_graph_mapping_destroy(gm2);
+    gssw_graph_destroy(graph);
+    free(nt_table);
+    free(mat);
+}
+
+
+
 int main() {
     fprintf(stderr, "======================================\n");
     fprintf(stderr, "====Running vg_gwfa_pipeline_tests====\n");
     fprintf(stderr, "======================================\n");
 
 
-    test_case3();
+    test_case4();
 
     fprintf(stderr, "=============Run complete!============\n");
     return 0;
