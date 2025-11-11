@@ -304,7 +304,6 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
 }
 
 
-
 // method to transform the CIGAR string into the gssw graph-CIGAR
 void ProjectA_VG_GWFA_Aligner::_csswl_cigar_to_gssw() {
 
