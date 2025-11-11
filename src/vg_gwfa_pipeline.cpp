@@ -324,6 +324,8 @@ void ProjectA_VG_GWFA_Aligner::_csswl_cigar_to_gssw() {
         }
     }
 
+    const char* cigar_buffer
+
     // iterate over the gssw nodes to add into the
     int32_t ref_pos = gm->position; // offset in the first node
     int32_t cigar_idx = 0;
