@@ -93,6 +93,8 @@ void test_case1() {
     gssw_graph_mapping_destroy(gm1);
     gssw_graph_mapping_destroy(gm2);
     gssw_graph_destroy(graph);
+    free(nt_table);
+    free(mat);
 }
 
 
@@ -209,6 +211,8 @@ void test_case2() {
     gssw_graph_mapping_destroy(gm1);
     gssw_graph_mapping_destroy(gm2);
     gssw_graph_destroy(graph);
+    free(nt_table);
+    free(mat);
 }
 
 
@@ -221,5 +225,6 @@ int main() {
 
     test_case2();
 
+    fprintf(stderr, "=============Run complete!============\n");
     return 0;
 }

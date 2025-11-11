@@ -658,11 +658,9 @@ gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
             break;
         case GWFA_CSSWL_INFIX:
             aligner.align_csswl_infix(1);
+            break;
     }
 
-    // aligner.align_edlib_infix(1);
-    // aligner.align_edlib(1);
-    aligner.align_csswl_infix(1);
     return aligner.graph_mapping();
 }
 
