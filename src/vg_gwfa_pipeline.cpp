@@ -520,7 +520,7 @@ void ProjectA_VG_GWFA_Aligner::_align_csswl() {
     }
 
     // perform alignment
-    result = ssw_align(profile, ref_num, reference.size(), gap_open, gap_extension, 1, 0, 0, 15);
+    result = ssw_align(profile, ref_num, reference.size(), gap_open, gap_extension, 0, 0, 0, 15);
 
     // construct CIGAR string
     char* csswl_cigar = construct_csswl_cigar_string(result);
