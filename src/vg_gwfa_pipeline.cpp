@@ -287,13 +287,6 @@ void ProjectA_VG_GWFA_Aligner::_cigar_to_gssw() {
                 }
             }
 
-            // check if we are at the end of the node
-            if (node_size) {
-                for (; node_size; --node_size) {
-                    gssw_cigar_push_back(g_cigar, 'S', 1);
-                }
-            }
-
             path_end = i+1;
             nc.cigar = g_cigar;
             gm->cigar.elements[i - path_start] = nc;
