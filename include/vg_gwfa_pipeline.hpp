@@ -114,7 +114,8 @@ class ProjectA_VG_GWFA_Aligner {
 
         void _prune_leading_nodes(); // prune nodes that are skipped due to the starting offset
         void _prune_trailing_nodes(); // prune nodes that are skipped due to alignment end
-
+        
+        void _csswl_cigar_to_gssw();
         void _cigar_to_gssw(); // parses a CIGAR and stores it into the gssw data struct
 
         
