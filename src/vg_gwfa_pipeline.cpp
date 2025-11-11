@@ -19,6 +19,14 @@
 #include "vg_gwfa_pipeline.hpp"
 #include "vg_gwfa_pipeline_wrapper.h"
 
+#ifdef __GNUC__
+#define LIKELY(x) __builtin_expect((x),1)
+#define UNLIKELY(x) __builtin_expect((x),0)
+#else
+#define LIKELY(x) (X)
+#define UNLIKELY(x) (x)
+#endif
+
 
 // constructor
 ProjectA_VG_GWFA_Aligner::ProjectA_VG_GWFA_Aligner(gssw_graph* vg_graph,
