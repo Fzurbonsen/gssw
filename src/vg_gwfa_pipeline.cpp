@@ -27,6 +27,17 @@
 #define UNLIKELY(x) (x)
 #endif
 
+#define MEASURE_CIGAR_BUILD
+#ifdef MEASURE_CIGAR_BUILD
+
+#include <chrono>
+using namespace std::chrono;
+typedef high_resolution_clock Clock;
+static int32_t time_slow = 0;
+static int32_t time_new = 0;
+
+#endif // MEASURE_CIGAR_BUILD
+
 
 // constructor
 ProjectA_VG_GWFA_Aligner::ProjectA_VG_GWFA_Aligner(gssw_graph* vg_graph,
@@ -318,6 +329,10 @@ void ProjectA_VG_GWFA_Aligner::_csswl_cigar_to_gssw() {
     // we first prune the leading nodes
     _prune_leading_nodes();
 
+#ifdef MEASURE_CIGAR_BUILD
+    auto t0 = Clock::now();
+#endif // MEASURE_CIGAR_BUILD
+
     // flatten the CIGAR to make it easier to handle
     string f_cigar; // flattened CIGAR
     int num = 0;
@@ -332,7 +347,7 @@ void ProjectA_VG_GWFA_Aligner::_csswl_cigar_to_gssw() {
         }
     }
 
-    const char* cigar_buffer
+    const char* cigar_buffer;
 
     // iterate over the gssw nodes to add into the
     int32_t ref_pos = gm->position; // offset in the first node
@@ -421,6 +436,132 @@ void ProjectA_VG_GWFA_Aligner::_csswl_cigar_to_gssw() {
     gm->cigar.length = path_end - path_start;
 
     done_all = true;
+
+#ifdef MEASURE_CIGAR_BUILD
+    auto t1 = Clock::now();
+    time_slow += duration_cast<nanoseconds>(t1 - t0).count(); 
+#endif // MEASURE_CIGAR_BUILD
+}
+
+
+// method to transform the CIGAR string into the gssw graph-CIGAR
+void ProjectA_VG_GWFA_Aligner::_csswl_cigar_to_gssw_fast() {
+
+    // we first prune the leading nodes
+    _prune_leading_nodes();
+
+#ifdef MEASURE_CIGAR_BUILD
+    auto t0 = Clock::now();
+#endif // MEASURE_CIGAR_BUILD
+
+    // flatten the CIGAR to make it easier to handle
+    string f_cigar; // flattened CIGAR
+    int num = 0;
+
+    for (const char* p = cigar.c_str(); *p; ++p) {
+        if (isdigit(*p)) {
+            num = num * 10 + (*p - '0');
+        } else {
+            if (num == 0) num = 1;
+            f_cigar.append(num, *p);
+            num = 0;
+        }
+    }
+
+    const char* cigar_buffer;
+
+    // iterate over the gssw nodes to add into the
+    int32_t ref_pos = gm->position; // offset in the first node
+    int32_t cigar_idx = 0;
+
+    // create graph CIGAR struct for gssw
+    gm->cigar.length = path.nv - path_start;
+    gm->cigar.elements = (gssw_node_cigar*)malloc((path.nv - path_start) * sizeof(gssw_node_cigar));
+    int32_t score_bonus = 0;
+
+    // scoring of matches and mismatches (we do not consider the entire scoring matrix, this is given from gssw)
+    int match = mat[0];
+    int mismatch = mat[1];
+
+    int counter = ql; // counter to ensure that all of the read is aligned
+
+    // iterate over all the nodes in the path to assign the corresponding cigar
+    for (int i = path_start; i < path.nv; ++i) {
+        gssw_node* node = node_map2[path.v[i]]; // find the node with the help of the node map
+        gssw_node_cigar nc;
+        nc.node = node;
+
+        gssw_cigar* g_cigar = (gssw_cigar*)calloc(1, sizeof(gssw_cigar));
+        int32_t node_size = node->len - ref_pos;
+
+        // we go through the node and assign the CIGAR elements
+        while (node_size) {
+            if (cigar_idx >= f_cigar.size()
+                || !(f_cigar[cigar_idx] == 'M' || f_cigar[cigar_idx] == 'I' || f_cigar[cigar_idx] == 'D' || f_cigar[cigar_idx] == '=' || f_cigar[cigar_idx] == 'X')) {
+                break;
+            }
+            if (f_cigar[cigar_idx] == 'M') {
+                node_size--;
+                counter--;
+                gssw_cigar_push_back(g_cigar, f_cigar[cigar_idx], 1);
+
+            } else if (f_cigar[cigar_idx] == 'D') {
+                node_size--;
+                gssw_cigar_push_back(g_cigar, f_cigar[cigar_idx], 1);
+
+            } else if (f_cigar[cigar_idx] == 'I') {
+                counter--;
+                gssw_cigar_push_back(g_cigar, f_cigar[cigar_idx], 1);
+
+            } else if (f_cigar[cigar_idx] == '=') {
+                node_size--;
+                counter--;
+                gssw_cigar_push_back(g_cigar, 'M', 1);
+
+            } else if (f_cigar[cigar_idx] == 'X') {
+                node_size--;
+                counter--;
+                gssw_cigar_push_back(g_cigar, 'X', 1);
+            }
+            cigar_idx++;
+        }
+
+        // check if we have reached the end of the CIGAR or the end of the path
+        if (cigar_idx >= f_cigar.size() || i+1 == path.nv) {
+            // check if there is still seqeuence left to align
+            if (counter) {
+                // check if it is worth performing a full alignment
+                if (gap_open + (counter - 1) * gap_extension < full_length_bonus) { // this does not work 100% as the alignment start by csswl cannot be controlled
+                    for (; counter > 0; --counter) {
+                        gssw_cigar_push_back(g_cigar, 'I', 1);
+                    }
+                    score_bonus += full_length_bonus;
+                } else {
+                    for (; counter > 0; --counter) {
+                        gssw_cigar_push_back(g_cigar, 'S', 1);
+                    }
+                }
+            }
+
+            path_end = i+1;
+            nc.cigar = g_cigar;
+            gm->cigar.elements[i - path_start] = nc;
+            break;
+        }
+
+        nc.cigar = g_cigar;
+        ref_pos = 0;
+        gm->cigar.elements[i - path_start] = nc;
+    }
+    gm->score += score_bonus; // 5 as it always has full length bonus
+    gm->cigar.length = path_end - path_start;
+
+    done_all = true;
+
+#ifdef MEASURE_CIGAR_BUILD
+    auto t1 = Clock::now();
+    time_new += duration_cast<nanoseconds>(t1 - t0).count(); 
+#endif // MEASURE_CIGAR_BUILD
 }
 
 
@@ -667,6 +808,26 @@ void ProjectA_VG_GWFA_Aligner::align_csswl_infix(int32_t do_traceback) {
 }
 
 
+// only for testing
+void ProjectA_VG_GWFA_Aligner::align_csswl_infix_fast(int32_t do_traceback) {
+
+    if (!(do_traceback == 0 || do_traceback == 1 || do_traceback == 2)) {
+        cerr << "[projectA::vg_to_gwfa_pipeline]error: invalid traceback mode!" << endl;
+        cerr << "\t" << do_traceback << " is not an allowed traceback mode. Choose one of the following:" << endl
+                                                                << "\t0: perform no traceback" << endl
+                                                                << "\t1: perform granular traceback" << endl
+                                                                << "\t2: perform full traceback in gwfa" << endl;
+        exit(1);
+    }
+
+    traceback = do_traceback;
+    _align_ed_infix();
+    _path_to_seq();
+    _align_csswl();
+    _csswl_cigar_to_gssw_fast();
+}
+
+
 // public method to print the graph read pair
 void ProjectA_VG_GWFA_Aligner::print_graph_read_pair(FILE* file) {
     fprintf(file, "\n");
@@ -772,14 +933,22 @@ gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
         case GWFA_CSSWL_INFIX:
             aligner.align_csswl_infix(1);
             break;
+        case GWFA_CSSWL_INFIX_FAST:
+            aligner.align_csswl_infix_fast(1);
     }
 
     return aligner.graph_mapping();
 }
 
-void test() {
-    cerr << "error" << endl;
-    exit(1);
+
+void print_timing(FILE* file) {
+#ifdef MEASURE_CIGAR_BUILD
+    fprintf(file, "time_old=%i ns\n", time_slow);
+    fprintf(file, "time_new=%i ns\n", time_new);
+#else // MEASURE_CIGAR_BUILD
+    fprintf(file, "warning: Timing has not been activated!\n");
+    fprintf(file, "\tTo activate timing set the MEASURE_CIGAR_BUILD macro.\n")
+#endif // MEASURE_CIGAR_BUILD
 }
 
 #ifdef __cplusplus

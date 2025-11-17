@@ -17,7 +17,8 @@ typedef enum {
     GWFA_EDLIB_PREFIX,
     GWFA_EDLIB_INFIX,
     GWFA_CSSWL_PREFIX,
-    GWFA_CSSWL_INFIX
+    GWFA_CSSWL_INFIX,
+    GWFA_CSSWL_INFIX_FAST // only for testing
 } vg_gwfa_pipeline_algorithm_type_e;
 
 gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
@@ -38,7 +39,7 @@ gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
                                                     vg_gwfa_pipeline_algorithm_type_e algorithm_type,
                                                     int8_t print_debug);
 
-void test();
+void print_timing(FILE* file);
 
 #ifdef __cplusplus
 }

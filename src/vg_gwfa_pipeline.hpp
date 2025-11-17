@@ -95,6 +95,7 @@ class ProjectA_VG_GWFA_Aligner {
         void align_edlib_infix(int32_t do_traceback);
         void align_csswl(int32_t do_traceback);
         void align_csswl_infix(int32_t do_traceback);
+        void align_csswl_infix_fast(int32_t do_traceback); // only for testing
         void print_graph_read_pair(FILE* file);
         void print(FILE* file);
         gssw_graph_mapping* graph_mapping();
@@ -116,6 +117,7 @@ class ProjectA_VG_GWFA_Aligner {
         void _prune_trailing_nodes(); // prune nodes that are skipped due to alignment end
         
         void _csswl_cigar_to_gssw();
+        void _csswl_cigar_to_gssw_fast();
         void _cigar_to_gssw(); // parses a CIGAR and stores it into the gssw data struct
 
         
