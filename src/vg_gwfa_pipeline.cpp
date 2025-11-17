@@ -442,50 +442,49 @@ void ProjectA_VG_GWFA_Aligner::_csswl_cigar_to_gssw() {
 }
 
 
-// helper function to handle 
-static inline void append_op(char op_buffer,
-                            int32_t& len_buffer_node,
-                            int32_t& len_buffer_read,
-                            int32_t& read_space,
-                            int32_t& node_space,
-                            int32_t& path_position,
-                            int32_t& path_start,
-                            gwf_path_t& path,
-                            gssw_cigar* gc,
-                            gssw_node_cigar& nc,
-                            gssw_node* node,
-                            gssw_node_cigar* cigar_elements,
-                            unordered_map<int32_t, gssw_node*>& node_map2,
-                            string& cigar,
-                            int32_t& ql) {
+// helper function to handle 'M'/'X'/'='
+static inline void append_op_M(char op_buffer,
+                                int32_t& len_buffer,
+                                int32_t& read_space,
+                                int32_t& node_space,
+                                int32_t& path_position,
+                                int32_t& path_start,
+                                gwf_path_t& path,
+                                gssw_cigar*& gc,
+                                gssw_node_cigar& nc,
+                                gssw_node*& node,
+                                gssw_node_cigar*& cigar_elements,
+                                unordered_map<int32_t, gssw_node*>& node_map2,
+                                string& cigar,
+                                int32_t& ql) {
+
     // sanity check that there is still enough space in the read
-    if (len_buffer_read > read_space) {
+    if (UNLIKELY(len_buffer > read_space)) {
         fprintf(stderr, "[vg_gwfa_pipeline]error: CIGAR is longer than the sequence!\n");
         fprintf(stderr, "\tCIGAR-string: %s\n", cigar.c_str());
         fprintf(stderr, "\tsequence length: %i\n", ql);
-        fprintf(stderr, "\telement: %i%c\n", len_buffer_read, op_buffer);
+        fprintf(stderr, "\telement: %i%c\n", len_buffer, op_buffer);
         fprintf(stderr, "\tlength left: %i\n", read_space);
         exit(1);
     }
 
     // check if the operation fits into the node
-    if (len_buffer_node <= node_space) {
-        gssw_cigar_push_back(gc, op_buffer, len_buffer_node);
+    if (len_buffer <= node_space) {
+        gssw_cigar_push_back(gc, op_buffer, len_buffer);
         // fprintf(stderr, "node: %i\t%i%c\n", node->id, len_buffer, op_buffer);
-        read_space -= len_buffer_read;
-        node_space -= len_buffer_node;
-        len_buffer_read = 0;
-        len_buffer_node = 0;
+        read_space -= len_buffer;
+        node_space -= len_buffer;
+        len_buffer = 0;
         return;
     }
 
     // if the operation does not fit into the node fit it iteratively to the nodes
-    while (len_buffer_node > node_space) {
+    while (len_buffer > node_space) {
         // add the remainder of the current node
         gssw_cigar_push_back(gc, op_buffer, node_space);
         // fprintf(stderr, "node: %i\t%i%c\n", node->id, node_space, op_buffer);
         read_space -= node_space;
-        len_buffer_node -= node_space;
+        len_buffer -= node_space;
 
         // copy node CIGAR to graph CIGAR
         cigar_elements[path_position - path_start] = nc;
@@ -494,27 +493,124 @@ static inline void append_op(char op_buffer,
         path_position++;
 
         // sanity check to ensure the alignment isn't bigger than the path
-        if (path_position == path.nv) {
+        if (UNLIKELY(path_position == path.nv)) {
             fprintf(stderr, "[vg_gwfa_pipeline]error: CIGAR is longer than the refernce!\n");
             fprintf(stderr, "\tCurrent path position %i of path length %i.\n", path_position, path.nv);
-            fprintf(stderr, "\tHas still %i%c left to align.\n", len_buffer_node, op_buffer);
+            fprintf(stderr, "\tHas still %i%c left to align.\n", len_buffer, op_buffer);
             exit(1);
         }
 
         // open new node
         node = node_map2[path.v[path_position]];
         nc.node = node;
-        gc = (gssw_cigar*)calloc(1, sizeof(gssw_cigar));
+        gc = (gssw_cigar*)malloc(sizeof(gssw_cigar));
+        gc->elements = nullptr;
+        gc->length = 0;
         nc.cigar = gc;
         node_space = node->len;
     }
     // add the rest of the buffer to the new node
-    gssw_cigar_push_back(gc, op_buffer, len_buffer_node);
+    gssw_cigar_push_back(gc, op_buffer, len_buffer);
     // fprintf(stderr, "node: %i\t%i%c\n", node->id, len_buffer, op_buffer);
-    read_space -= len_buffer_read;
-    node_space -= len_buffer_node;
-    len_buffer_read = 0;
-    len_buffer_node = 0;
+    read_space -= len_buffer;
+    node_space -= len_buffer;
+    len_buffer = 0;
+    return;
+}
+
+
+// helper function to handle 'D'
+static inline void append_op_D(char op_buffer,
+                                int32_t& len_buffer,
+                                int32_t& node_space,
+                                int32_t& path_position,
+                                int32_t& path_start,
+                                gwf_path_t& path,
+                                gssw_cigar*& gc,
+                                gssw_node_cigar& nc,
+                                gssw_node*& node,
+                                gssw_node_cigar*& cigar_elements,
+                                unordered_map<int32_t, gssw_node*>& node_map2,
+                                string& cigar,
+                                int32_t& ql) {
+
+    // check if the operation fits into the node
+    if (len_buffer <= node_space) {
+        gssw_cigar_push_back(gc, op_buffer, len_buffer);
+        // fprintf(stderr, "node: %i\t%i%c\n", node->id, len_buffer, op_buffer);
+        node_space -= len_buffer;
+        len_buffer = 0;
+        return;
+    }
+
+    // if the operation does not fit into the node fit it iteratively to the nodes
+    while (len_buffer > node_space) {
+        // add the remainder of the current node
+        gssw_cigar_push_back(gc, op_buffer, node_space);
+        // fprintf(stderr, "node: %i\t%i%c\n", node->id, node_space, op_buffer);
+        len_buffer -= node_space;
+
+        // copy node CIGAR to graph CIGAR
+        cigar_elements[path_position - path_start] = nc;
+
+        // increment through the path
+        path_position++;
+
+        // sanity check to ensure the alignment isn't bigger than the path
+        if (UNLIKELY(path_position == path.nv)) {
+            fprintf(stderr, "[vg_gwfa_pipeline]error: CIGAR is longer than the refernce!\n");
+            fprintf(stderr, "\tCurrent path position %i of path length %i.\n", path_position, path.nv);
+            fprintf(stderr, "\tHas still %i%c left to align.\n", len_buffer, op_buffer);
+            exit(1);
+        }
+
+        // open new node
+        node = node_map2[path.v[path_position]];
+        nc.node = node;
+        gc = (gssw_cigar*)malloc(sizeof(gssw_cigar));
+        gc->elements = nullptr;
+        gc->length = 0;
+        nc.cigar = gc;
+        node_space = node->len;
+    }
+    // add the rest of the buffer to the new node
+    gssw_cigar_push_back(gc, op_buffer, len_buffer);
+    // fprintf(stderr, "node: %i\t%i%c\n", node->id, len_buffer, op_buffer);
+    node_space -= len_buffer;
+    len_buffer = 0;
+    return;
+}
+
+
+// helper function to handle 'I''
+static inline void append_op_I(char op_buffer,
+                                int32_t& len_buffer,
+                                int32_t& read_space,
+                                int32_t& path_position,
+                                int32_t& path_start,
+                                gwf_path_t& path,
+                                gssw_cigar*& gc,
+                                gssw_node_cigar& nc,
+                                gssw_node*& node,
+                                gssw_node_cigar*& cigar_elements,
+                                unordered_map<int32_t, gssw_node*>& node_map2,
+                                string& cigar,
+                                int32_t& ql) {
+
+    // sanity check that there is still enough space in the read
+    if (UNLIKELY(len_buffer > read_space)) {
+        fprintf(stderr, "[vg_gwfa_pipeline]error: CIGAR is longer than the sequence!\n");
+        fprintf(stderr, "\tCIGAR-string: %s\n", cigar.c_str());
+        fprintf(stderr, "\tsequence length: %i\n", ql);
+        fprintf(stderr, "\telement: %i%c\n", len_buffer, op_buffer);
+        fprintf(stderr, "\tlength left: %i\n", read_space);
+        exit(1);
+    }
+
+    gssw_cigar_push_back(gc, op_buffer, len_buffer);
+    // fprintf(stderr, "node: %i\t%i%c\n", node->id, len_buffer, op_buffer);
+    read_space -= len_buffer;
+    len_buffer = 0;
     return;
 }
 
@@ -544,7 +640,9 @@ void ProjectA_VG_GWFA_Aligner::_csswl_cigar_to_gssw_fast() {
     gssw_node_cigar nc;
     gssw_node* node = node_map2[path.v[path_position]];
     nc.node = node;
-    gssw_cigar* gc = (gssw_cigar*)calloc(1, sizeof(gssw_cigar));
+    gssw_cigar* gc = (gssw_cigar*)malloc(sizeof(gssw_cigar));
+    gc->elements = nullptr;
+    gc->length = 0;
     nc.cigar = gc;
 
     // tracker to know how much space is left in a node
@@ -556,11 +654,11 @@ void ProjectA_VG_GWFA_Aligner::_csswl_cigar_to_gssw_fast() {
     // fprintf(stderr, "CIGAR:\n");
     // fprintf(stderr, "%s\n", cigar.c_str());
     for (const char* p = cigar.c_str(); *p; ++p) {
-        if (isdigit(*p)) {
+        if (*p >= '0' && *p <= '9') {
             // update the len_buffer
             len_buffer = len_buffer * 10 + (*p - '0');
         } else {
-            if (len_buffer == 0) {
+            if (UNLIKELY(len_buffer == 0)) {
                 fprintf(stderr, "[vg_gwfa_pipeline]error: CIGAR with element of lenght 0!\n");
                 fprintf(stderr, "\tThe CIGAR:\n");
                 fprintf(stderr, "\t%s\n", cigar.c_str());
@@ -578,95 +676,54 @@ void ProjectA_VG_GWFA_Aligner::_csswl_cigar_to_gssw_fast() {
                     op_buffer = 'M'; // we rewrite '=' as 'M'
                 case 'X':
                 case 'M':
-                    append_op(op_buffer,
-                            len_buffer,
-                            len_buffer,
-                            read_space,
-                            node_space,
-                            path_position,
-                            path_start,
-                            path,
-                            gc,
-                            nc,
-                            node,
-                            gm->cigar.elements,
-                            node_map2,
-                            cigar,
-                            ql);
+                    append_op_M(op_buffer,
+                                len_buffer,
+                                read_space,
+                                node_space,
+                                path_position,
+                                path_start,
+                                path,
+                                gc,
+                                nc,
+                                node,
+                                gm->cigar.elements,
+                                node_map2,
+                                cigar,
+                                ql);
+                    break;
 
                 // case D: deletion
                 case 'D':
-                    // sanity check that there is still enough space in the read
-                    if (len_buffer > read_space) {
-                        fprintf(stderr, "[vg_gwfa_pipeline]error: CIGAR is longer than the sequence!\n");
-                        fprintf(stderr, "\tCIGAR-string: %s\n", cigar.c_str());
-                        fprintf(stderr, "\tsequence length: %i\n", ql);
-                        fprintf(stderr, "\telement: %i%c\n", len_buffer, op_buffer);
-                        fprintf(stderr, "\tlength left: %i\n", read_space);
-                        exit(1);
-                    }
-
-                    // check if the operation fits into the node
-                    if (len_buffer <= node_space) {
-                        gssw_cigar_push_back(gc, op_buffer, len_buffer);
-                        // fprintf(stderr, "node: %i\t%i%c\n", node->id, len_buffer, op_buffer);
-                        node_space -= len_buffer;
-                        len_buffer = 0;
-                        break;
-                    }
-
-                    // if the operation does not fit into the node fit it iteratively to the nodes
-                    while (len_buffer > node_space) {
-                        // add the remainder of the current node
-                        gssw_cigar_push_back(gc, op_buffer, node_space);
-                        // fprintf(stderr, "node: %i\t%i%c\n", node->id, node_space, op_buffer);
-                        len_buffer -= node_space;
-
-                        // copy node CIGAR to graph CIGAR
-                        gm->cigar.elements[path_position - path_start] = nc;
-
-                        // increment through the path
-                        path_position++;
-
-                        // sanity check to ensure the alignment isn't bigger than the path
-                        if (path_position == path.nv) {
-                            fprintf(stderr, "[vg_gwfa_pipeline]error: CIGAR is longer than the refernce!\n");
-                            fprintf(stderr, "\tCurrent path position %i of path length %i.\n", path_position, path.nv);
-                            fprintf(stderr, "\tHas still %i%c left to align.\n", len_buffer, op_buffer);
-                            exit(1);
-                        }
-
-                        // open new node
-                        node = node_map2[path.v[path_position]];
-                        nc.node = node;
-                        gc = (gssw_cigar*)calloc(1, sizeof(gssw_cigar));
-                        nc.cigar = gc;
-                        node_space = node->len;
-                    }
-                    // add the rest of the buffer to the new node
-                    gssw_cigar_push_back(gc, op_buffer, len_buffer);
-                    // fprintf(stderr, "node: %i\t%i%c\n", node->id, len_buffer, op_buffer);
-                    node_space -= len_buffer;
-                    len_buffer = 0;
+                    append_op_D(op_buffer,
+                                len_buffer,
+                                node_space,
+                                path_position,
+                                path_start,
+                                path,
+                                gc,
+                                nc,
+                                node,
+                                gm->cigar.elements,
+                                node_map2,
+                                cigar,
+                                ql);
                     break;
 
                 // case I: insertion
                 case 'I':
-                    // sanity check that there is still enough space in the read
-                    if (len_buffer > read_space) {
-                        fprintf(stderr, "[vg_gwfa_pipeline]error: CIGAR is longer than the sequence!\n");
-                        fprintf(stderr, "\tCIGAR-string: %s\n", cigar.c_str());
-                        fprintf(stderr, "\tsequence length: %i\n", ql);
-                        fprintf(stderr, "\telement: %i%c\n", len_buffer, op_buffer);
-                        fprintf(stderr, "\tlength left: %i\n", read_space);
-                        exit(1);
-                    }
-
-                    // if the operation fits into the current node then we can append it
-                    gssw_cigar_push_back(gc, op_buffer, len_buffer);
-                    // fprintf(stderr, "node: %i\t%i%c\n", node->id, len_buffer, op_buffer);
-                    read_space -= len_buffer;
-                    len_buffer = 0;
+                    append_op_I(op_buffer,
+                                len_buffer,
+                                read_space,
+                                path_position,
+                                path_start,
+                                path,
+                                gc,
+                                nc,
+                                node,
+                                gm->cigar.elements,
+                                node_map2,
+                                cigar,
+                                ql);
                     break;
 
                 // default: this should never happen
@@ -679,7 +736,7 @@ void ProjectA_VG_GWFA_Aligner::_csswl_cigar_to_gssw_fast() {
     }
 
     // read length sanity check
-    if (read_space < 0) {
+    if (UNLIKELY(read_space < 0)) {
         fprintf(stderr, "[vg_gwfa_pipeline]error: alignment is longer than the read!\n");
         fprintf(stderr, "\tspace left in read: %i\n", read_space);
         fprintf(stderr, "\tCIGAR string: %s\n", cigar.c_str());
@@ -688,7 +745,7 @@ void ProjectA_VG_GWFA_Aligner::_csswl_cigar_to_gssw_fast() {
     }
 
     // softclip the rest of the read
-    if (read_space > 0) {
+    if (LIKELY(read_space > 0)) {
         gssw_cigar_push_back(gc, 'S', read_space);
         read_space = 0;
     }
