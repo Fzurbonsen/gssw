@@ -479,7 +479,7 @@ static inline void append_op_M(char op_buffer,
     }
 
     // if the operation does not fit into the node fit it iteratively to the nodes
-    while (len_buffer > node_space) {
+    while (LIKELY(len_buffer > node_space)) {
         // add the remainder of the current node
         gssw_cigar_push_back(gc, op_buffer, node_space);
         // fprintf(stderr, "node: %i\t%i%c\n", node->id, node_space, op_buffer);
@@ -544,7 +544,7 @@ static inline void append_op_D(char op_buffer,
     }
 
     // if the operation does not fit into the node fit it iteratively to the nodes
-    while (len_buffer > node_space) {
+    while (LIKELY(len_buffer > node_space)) {
         // add the remainder of the current node
         gssw_cigar_push_back(gc, op_buffer, node_space);
         // fprintf(stderr, "node: %i\t%i%c\n", node->id, node_space, op_buffer);
@@ -1145,6 +1145,7 @@ void print_timing(FILE* file) {
 #ifdef MEASURE_CIGAR_BUILD
     fprintf(file, "time_old=%i ns\n", time_slow);
     fprintf(file, "time_new=%i ns\n", time_new);
+    fprintf(file, "relative speedup: %f%\n", ((float)time_slow/time_new - 1)*100);
 #else // MEASURE_CIGAR_BUILD
     fprintf(file, "warning: Timing has not been activated!\n");
     fprintf(file, "\tTo activate timing set the MEASURE_CIGAR_BUILD macro.\n")
