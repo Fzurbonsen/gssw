@@ -110,14 +110,16 @@ void test_case2() {
     uint8_t gap_extension = 1;
     int8_t full_length_bonus = 0;
 
-    for (int i = 0; i < 500; ++i) {
+    gssw_sse2_disable();
+
+    for (int i = 0; i < 50; ++i) {
         int8_t* nt_table = gssw_create_nt_table();
         int8_t* mat = gssw_create_score_matrix(match, mismatch);
 
 
 
         // set read
-        const char* read = "GGCGACAGAGCGAGACTCCGTCTCAAAAAAAAACAAAGATCGGAAGAGCACACGTCTGAACTCCAGTCACTTGGATCATCTCGTATGCCGTCTTCTGCTTG";
+        const char* read = "GGCGACAGAGCGAGACTCCGTCTCAAAAAAAAACAAAGATCGGAAGAGCACACGTCTGAACTCCAGTCACTTGGATCATCTCGTATGCCGTCTTCTGCTTGGGCGACAGAGCGAGACT";
 
 
 
@@ -126,9 +128,9 @@ void test_case2() {
         node1 = gssw_node_create("Node1", 1, "TGGTGGCGGGCGCCTGTAGTCCTGGCTACTCGGGAGGCTGAGGCAGGAGAATGGCGTGAACCCGGGAGGCGGAGCTTGCAGTGAGCGGAGATCGCGCCACTGCACTCCAGCCTGGG", nt_table, mat);
         node2 = gssw_node_create("Node2", 2, "C", nt_table, mat);
         node3 = gssw_node_create("Node3", 3, "A", nt_table, mat);
-        node4 = gssw_node_create("Node4", 4, "A", nt_table, mat);
+        node4 = gssw_node_create("Node4", 4, "AACAGAGCGAGACTCCGTCTCAAAAAAAAAAAATTGTTTAAATTGACAGAGCGAGACTCCGTCTCAAAAAAAAAAAATTGTTTAAATTG", nt_table, mat);
         node5 = gssw_node_create("Node5", 5, "G", nt_table, mat);
-        node6 = gssw_node_create("Node6", 6, "ACAGAGCGAGACTCCGTCTCAAAAAAAAAAAATTGTTTAAATTG", nt_table, mat);
+        node6 = gssw_node_create("Node6", 6, "ACAGAGCGAGACTCCGTCTCAAAAAAAAAAAATTGTTTAAATTGACAGAGCGAGACTCCGTCTCAAAAAAAAAAAATTGTTTAAATTG", nt_table, mat);
         node7 = gssw_node_create("Node7", 7, "A", nt_table, mat);
         node8 = gssw_node_create("Node8", 8, "AAAAAAAAAATGACAGGGTCTTGCTGTCACCCAGGCTGGAGCGTAGTGGCCCTGATCATGATTCACAGTAGCCTCAAACTCCTGGGCTCAAGCAATCTTCCCTCTTCAGCCTCCCAAAGCACTGGAATTACAAGCCTGAGCCACTGCACCTGGCAAGAGGCCATGTTTTTGATCTTGGAATTTCACGGTACCTAAGGCCACATAGTACACCCTCAGGAAAGCAAACAAGTTAATGACAAATTAAAGGTAACCTGTATTTATTGCTGTCGCCTTTCCAATCATGGTGACGTGTCATAGGGTGGGTGCGTTCTTCCTCAGAGACAGACCCCGAGCTGTACCCCAACCTAGTCTTCTCCCAGCTAAATCTCCCTCCCTGGTCACCTCATTCTAGTTCATGAAGTGATTGGCACATTTGCTTAGCTCTACGGCTGCTTCATCACGATTCTTTTAGTCAGTATCTTCACACTAGTATATGAGCTTTCTTA", nt_table, mat);
 
@@ -162,28 +164,28 @@ void test_case2() {
         gssw_graph_add_node(graph, node8);
 
 
-        // perform alignment
-        gssw_graph_fill_pinned(graph,
-                                read,
-                                nt_table,
-                                mat,
-                                gap_open,
-                                gap_extension,
-                                full_length_bonus,
-                                full_length_bonus,
-                                15,
-                                2,
-                                1);
+        // // perform alignment
+        // gssw_graph_fill_pinned(graph,
+        //                         read,
+        //                         nt_table,
+        //                         mat,
+        //                         gap_open,
+        //                         gap_extension,
+        //                         full_length_bonus,
+        //                         full_length_bonus,
+        //                         15,
+        //                         2,
+        //                         1);
 
-        gssw_graph_mapping* gm1 = gssw_graph_trace_back(graph,
-                                                        read,
-                                                        strlen(read),
-                                                        nt_table,
-                                                        mat,
-                                                        gap_open,
-                                                        gap_extension,
-                                                        full_length_bonus,
-                                                        full_length_bonus);
+        // gssw_graph_mapping* gm1 = gssw_graph_trace_back(graph,
+        //                                                 read,
+        //                                                 strlen(read),
+        //                                                 nt_table,
+        //                                                 mat,
+        //                                                 gap_open,
+        //                                                 gap_extension,
+        //                                                 full_length_bonus,
+        //                                                 full_length_bonus);
 
         gssw_graph_mapping* gm2 = gwfa_graph_align_trace_back(graph,
                                                                 0,
@@ -200,7 +202,7 @@ void test_case2() {
                                                                 gap_extension,
                                                                 full_length_bonus,
                                                                 full_length_bonus,
-                                                                i % 2 == 0 ? GWFA_CSSWL_INFIX : GWFA_CSSWL_INFIX_FAST,
+                                                                GWFA_CSSWL_INFIX,
                                                                 0);
 
         if (i == 1 || i == 0) {
@@ -208,14 +210,12 @@ void test_case2() {
             fprintf(stderr, "gwfa: %i\n", gm2->score);
         }
 
-        gssw_graph_mapping_destroy(gm1);
+        // gssw_graph_mapping_destroy(gm1);
         gssw_graph_mapping_destroy(gm2);
         gssw_graph_destroy(graph);
         free(nt_table);
         free(mat);
     }
-
-    print_timing(stderr);
 }
 
 

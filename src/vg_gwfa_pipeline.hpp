@@ -32,6 +32,14 @@ using namespace std;
 #ifndef PROJECTA_VG_GWFA_PIPELINE_HPP
 #define PROJECTA_VG_GWFA_PIPELINE_HPP
 
+typedef enum {
+    MATCH,
+    MISMATCH,
+    DELETION,
+    INSERTION,
+    INVALID
+} op_code_e;
+
 // Class to handle the vg (gssw) alignment process with gwfa.
 class ProjectA_VG_GWFA_Aligner {
     
@@ -118,9 +126,7 @@ class ProjectA_VG_GWFA_Aligner {
         
         void _csswl_cigar_to_gssw();
         void _csswl_cigar_to_gssw_fast();
-        void _cigar_to_gssw(); // parses a CIGAR and stores it into the gssw data struct
-
-        
+        void _cigar_to_gssw(); // parses a CIGAR and stores it into the gssw data struct  
 };
 
 #endif // PROJECTA_VG_GWFA_PIPELINE_HPP
