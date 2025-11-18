@@ -273,6 +273,9 @@ void test_case3() {
                                                     full_length_bonus,
                                                     full_length_bonus);
 
+    gssw_print_graph_cigar(&gm1->cigar, stderr);
+    fprintf(stderr, "gssw: %i\n", gm1->score);
+
     gssw_graph_mapping* gm2 = gwfa_graph_align_trace_back(graph,
                                                             0,
                                                             0,
@@ -291,8 +294,6 @@ void test_case3() {
                                                             GWFA_CSSWL_INFIX,
                                                             1);
 
-    gssw_print_graph_cigar(&gm1->cigar, stderr);
-    fprintf(stderr, "gssw: %i\n", gm1->score);
     gssw_print_graph_cigar(&gm2->cigar, stderr);
     fprintf(stderr, "gwfa: %i\n", gm2->score);
 
@@ -451,6 +452,10 @@ void test_case5() {
                                                     full_length_bonus,
                                                     full_length_bonus);
 
+    gssw_print_graph_cigar(&gm1->cigar, stderr);
+    fprintf(stderr, "offset: %i\n", gm1->position);
+    fprintf(stderr, "gssw: %i\n", gm1->score);
+
     // gssw_graph_print_score_matrices(graph, read, strlen(read), stdout);
 
     gssw_graph_mapping* gm2 = gwfa_graph_align_trace_back(graph,
@@ -471,9 +476,6 @@ void test_case5() {
                                                             GWFA_CSSWL_INFIX,
                                                             1);
 
-    gssw_print_graph_cigar(&gm1->cigar, stderr);
-    fprintf(stderr, "offset: %i\n", gm1->position);
-    fprintf(stderr, "gssw: %i\n", gm1->score);
     gssw_print_graph_cigar(&gm2->cigar, stderr);
     fprintf(stderr, "offset: %i\n", gm2->position);
     fprintf(stderr, "gwfa: %i\n", gm2->score);
@@ -493,7 +495,7 @@ int main() {
     fprintf(stderr, "======================================\n");
 
 
-    test_case2();
+    test_case3();
 
     fprintf(stderr, "=============Run complete!============\n");
     return 0;
