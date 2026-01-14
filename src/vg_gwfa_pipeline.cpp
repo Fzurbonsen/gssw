@@ -780,8 +780,9 @@ void ProjectA_VG_GWFA_Aligner::_align_csswl() {
 
     // construct CIGAR string
     fprintf(stderr, "\n");
+    fprintf(stderr, "%s\n", read);
+    fprintf(stderr, "%s\n", reference.c_str());
     fprintf(stderr, "cigar len: %i\t", result->cigarLen);
-    fprintf(stderr, "cigar num: %i\n", result->cigar);
     char* csswl_cigar = construct_csswl_cigar_string(result);
     cigar = csswl_cigar;
 
