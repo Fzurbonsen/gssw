@@ -778,24 +778,31 @@ void ProjectA_VG_GWFA_Aligner::_align_csswl() {
     // perform alignment
     result = ssw_align(profile, ref_num, reference.size(), gap_open, gap_extension, 1, 0, 0, 15);
 
-    // construct CIGAR string
-    fprintf(stderr, "\n");
-    fprintf(stderr, "%s\n", read);
-    fprintf(stderr, "%s\n", reference.c_str());
-    fprintf(stderr, "cigar len: %i\t", result->cigarLen);
-    char* csswl_cigar = construct_csswl_cigar_string(result);
-    cigar = csswl_cigar;
+    // safety check for the cigar length:
+    if (result->cigarLen < 0) {
+        // construct CIGAR string
+        char* csswl_cigar = construct_csswl_cigar_string(result);
+        cigar = csswl_cigar;
 
-    gm->position = result->ref_begin1;
-    gm->score = result->score1;
+        gm->position = result->ref_begin1;
+        gm->score = result->score1;
+
+        free(num);
+        free(ref_num);
+        free(csswl_cigar);
+        align_destroy(result);
+        init_destroy(profile);
+
+        done_align_s2s = true;
+        return;
+    }
 
     free(num);
     free(ref_num);
-    free(csswl_cigar);
     align_destroy(result);
     init_destroy(profile);
 
-    done_align_s2s = true;
+    _align_edlib_infix();
 }
 
 
