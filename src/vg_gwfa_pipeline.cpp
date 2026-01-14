@@ -802,6 +802,7 @@ void ProjectA_VG_GWFA_Aligner::_align_csswl() {
     align_destroy(result);
     init_destroy(profile);
 
+    // alternative alignment
     _align_edlib_infix();
 }
 
