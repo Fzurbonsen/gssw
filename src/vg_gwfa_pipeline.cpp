@@ -834,7 +834,7 @@ void ProjectA_VG_GWFA_Aligner::_align_ed_infix() {
     ::gwf_ed_index(km, gwfa_graph);
 
     // perform the alignment
-    score = ::gwf_ed_infix(km,
+    score = ::gwf_ed_infix_simd(km,
                             gwfa_graph,
                             ql,
                             read,
