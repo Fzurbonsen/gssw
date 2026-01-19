@@ -55,7 +55,8 @@ ProjectA_VG_GWFA_Aligner::ProjectA_VG_GWFA_Aligner(gssw_graph* vg_graph,
         done_path_to_seq(false),
         done_align_s2s(false),
         done_all(false),
-        gm(::gssw_graph_mapping_create())
+        gm(::gssw_graph_mapping_create()),
+        simd_on(false)
 {
     _gssw_to_gwfa();
 }
@@ -104,6 +105,10 @@ void ProjectA_VG_GWFA_Aligner::_print_graph_cigar(FILE* file) {
     // ToDo
 }
 
+// switch SIMD on
+void ProjectA_VG_GWFA_Aligner::switch_simd_on() {
+    simd_on = true;
+}
 
 // method to transform gssw data structures to gwfa data structures
 void ProjectA_VG_GWFA_Aligner::_gssw_to_gwfa() {
@@ -813,16 +818,29 @@ void ProjectA_VG_GWFA_Aligner::_align_ed() {
     // index the graph
     ::gwf_ed_index(km, gwfa_graph);
 
-    // perform the alignment
-    score = ::gwf_ed(km,
-                    gwfa_graph,
-                    ql,
-                    read,
-                    v0,
-                    v1,
-                    max_lag,
-                    traceback,
-                    &path);
+    if (simd_on) {
+        // perform the alignment
+        score = ::gwf_ed_simd(km,
+                            gwfa_graph,
+                            ql,
+                            read,
+                            v0,
+                            v1,
+                            max_lag,
+                            traceback,
+                            &path);
+    } else {
+        // perform the alignment
+        score = ::gwf_ed(km,
+                        gwfa_graph,
+                        ql,
+                        read,
+                        v0,
+                        v1,
+                        max_lag,
+                        traceback,
+                        &path);
+    }
     done_align_s2g = true;
 }
 
@@ -833,16 +851,30 @@ void ProjectA_VG_GWFA_Aligner::_align_ed_infix() {
     // index the graph
     ::gwf_ed_index(km, gwfa_graph);
 
-    // perform the alignment
-    score = ::gwf_ed_infix_simd(km,
-                            gwfa_graph,
-                            ql,
-                            read,
-                            v0,
-                            v1,
-                            max_lag,
-                            traceback,
-                            &path);
+
+    if (simd_on) {
+        // perform the alignment
+        score = ::gwf_ed_infix_simd(km,
+                                    gwfa_graph,
+                                    ql,
+                                    read,
+                                    v0,
+                                    v1,
+                                    max_lag,
+                                    traceback,
+                                    &path);
+    } else {
+        // perform the alignment
+        score = ::gwf_ed_infix(km,
+                                gwfa_graph,
+                                ql,
+                                read,
+                                v0,
+                                v1,
+                                max_lag,
+                                traceback,
+                                &path);
+    }
     done_align_s2g = true;
 }
 
@@ -1017,16 +1049,30 @@ gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
         aligner.print_graph_read_pair(stderr);
     }
 
+
+
     switch (algorithm_type) {
+
+        case GWFA_EDLIB_PREFIX_SIMD:
+            aligner.switch_simd_on();
         case GWFA_EDLIB_PREFIX:
             aligner.align_edlib(1);
             break;
+
+        case GWFA_EDLIB_INFIX_SIMD:
+            aligner.switch_simd_on();
         case GWFA_EDLIB_INFIX:
             aligner.align_edlib_infix(1);
             break;
+
+        case GWFA_CSSWL_PREFIX_SIMD:
+            aligner.switch_simd_on();
         case GWFA_CSSWL_PREFIX:
             aligner.align_csswl(1);
             break;
+
+        case GWFA_CSSWL_INFIX_SIMD:
+            aligner.switch_simd_on();
         case GWFA_CSSWL_INFIX:
             aligner.align_csswl_infix(1);
             break;

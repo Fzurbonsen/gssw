@@ -85,6 +85,9 @@ class ProjectA_VG_GWFA_Aligner {
         // output
         gssw_graph_mapping* gm;
 
+        // SIMD
+        bool simd_on;
+
 
     // constructor/destructor
     public:
@@ -99,6 +102,7 @@ class ProjectA_VG_GWFA_Aligner {
     
     // methods
     public:
+        void switch_simd_on();
         void align_edlib(int32_t do_traceback);
         void align_edlib_infix(int32_t do_traceback);
         void align_csswl(int32_t do_traceback);
