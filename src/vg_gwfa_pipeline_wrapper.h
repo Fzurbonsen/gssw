@@ -15,9 +15,13 @@ extern "C" {
 
 typedef enum {
     GWFA_EDLIB_PREFIX,
+    GWFA_EDLIB_PREFIX_SIMD,
     GWFA_EDLIB_INFIX,
+    GWFA_EDLIB_INFIX_SIMD,
     GWFA_CSSWL_PREFIX,
-    GWFA_CSSWL_INFIX
+    GWFA_CSSWL_PREFIX_SIMD,
+    GWFA_CSSWL_INFIX,
+    GWFA_CSSWL_INFIX_SIMD
 } vg_gwfa_pipeline_algorithm_type_e;
 
 gssw_graph_mapping* gwfa_graph_align_trace_back(gssw_graph* graph,
