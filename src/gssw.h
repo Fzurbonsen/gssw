@@ -160,6 +160,8 @@ typedef struct _gssw_node {
     gssw_node** next;
     int32_t count_next;
     gssw_align* alignment;
+
+    uint64_t gwfa_index;
 } _gssw_node;
 
 typedef struct {

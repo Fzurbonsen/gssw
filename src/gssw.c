@@ -4978,6 +4978,7 @@ gssw_node* gssw_node_create(void* data,
     n->count_prev = 0; // are these be set == 0 by calloc?
     n->count_next = 0;
     n->alignment = NULL;
+    n->gwfa_index = 0;
     return n;
 }
 
